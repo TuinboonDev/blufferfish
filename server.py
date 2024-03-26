@@ -19,11 +19,14 @@ from Packets.Serverbound.Handshake import Handshake
 from Packets.Serverbound.EncryptionResponse import EncryptionResponse
 from Packets.Serverbound.LoginAcknowledged import LoginAcknowledged
 from Packets.Serverbound.ServerboundPluginMessage import ServerboundPluginMessage
+from Packets.Serverbound.AcknowledgeFinishConfiguration import AcknowledgeFinishConfiguration
 
 from Packets.Clientbound.PingResponse import PingResponse
 from Packets.Clientbound.StatusResponse import StatusResponse
 from Packets.Clientbound.EncryptionRequest import EncryptionRequest
 from Packets.Clientbound.LoginSuccess import LoginSuccess
+from Packets.Clientbound.RegistryData import RegistryData
+from Packets.Clientbound.ConfigurationFinish import ConfigurationFinish
 
 from Packets.PacketHandler import Clientbound, Serverbound
 from Packets.PacketUtil import unpack_varint, unpack_encrypted_varint, pack_varint, unpack_varint_bytes
@@ -182,27 +185,23 @@ def main():
                 if isinstance(packet, ServerboundPluginMessage):
                     print("Plugin Message")
 
-                #print(decryptor.update(client_socket.recv(1024))) #a #plugin channels
-                #print(decryptor.update(client_socket.recv(1024))) #a # client info
+                #Registry Data
 
-                #weird ahh registry data
+                registry_data = RegistryData()
 
-                registry_data = open("registry_info.packet", "rb").read()
-
-                packet = b'\x05' + registry_data
-
-                packet_length = pack_varint(len(packet))
-
-                client_socket.send(encryptor.update(packet_length + packet))
+                clientbound.send_encrypted(registry_data, encryptor)
 
                 #configuration finish
 
-                packet = b'\x02'
+                configfinish = ConfigurationFinish()
 
-                packet_length = b'\x01'
+                clientbound.send_encrypted(configfinish, encryptor)
 
-                client_socket.send(encryptor.update(packet_length + packet)) #to client
-                #print(decryptor.update(client_socket.recv(1024))) #a # to server
+                packet = get_encrypted_packet(client_socket, decryptor)
+
+                if isinstance(packet, AcknowledgeFinishConfiguration):
+                    print("Configuration Finished")
+
 
                 #Play packet
                 entity_id = b'\x00\x00\x00\x01'

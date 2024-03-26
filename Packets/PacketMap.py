@@ -9,6 +9,7 @@ from Packets.Serverbound.LoginAcknowledged import LoginAcknowledged
 from Packets.Clientbound.LoginSuccess import LoginSuccess
 from Packets.Clientbound.EncryptionRequest import EncryptionRequest
 from Packets.Serverbound.ServerboundPluginMessage import ServerboundPluginMessage
+from Packets.Serverbound.AcknowledgeFinishConfiguration import AcknowledgeFinishConfiguration
 
 GameStates = {
     "HANDSHAKE": {
@@ -43,7 +44,8 @@ GameStates = {
 
     "CONFIGURATION": {
         "C2S": {
-            0x01: ServerboundPluginMessage
+            0x01: ServerboundPluginMessage,
+            0x02: AcknowledgeFinishConfiguration
         }
     }
 }

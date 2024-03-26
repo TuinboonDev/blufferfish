@@ -7,6 +7,8 @@ class Clientbound:
     def __init__(self, socket):
         self.socket = socket
 
+    #TODO: Make __send method send the packet idea too
+
     def __send(self, packet, encryption):
         final_packet = b''
 
