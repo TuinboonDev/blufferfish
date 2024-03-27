@@ -6,9 +6,6 @@ class LoginSuccess:
 
         properties = pack_data(properties)
 
-        packet_id = pack_varint(0x02)
-
-        self.packet_id = packet_id
         self.uuid = uuid
         self.username = username
         self.properties = properties

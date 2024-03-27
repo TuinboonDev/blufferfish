@@ -1,16 +1,22 @@
-from Packets.PacketMap import GameStates
+from Packets.PacketMap import GameStates, get_gamestate
 from Packets.PacketUtil import pack_varint
-
-from Packets.Clientbound.LoginSuccess import LoginSuccess
+from Packets.PacketMap import GameStates
 
 class Clientbound:
     def __init__(self, socket):
         self.socket = socket
 
-    #TODO: Make __send method send the packet idea too
-
     def __send(self, packet, encryption):
-        final_packet = b''
+        packet_id_map = {v: k for k, v in GameStates[get_gamestate()]["S2C"].items()}
+
+        packet_class = type(packet)
+
+        try:
+            final_packet = pack_varint(packet_id_map.get(packet_class))
+        except TypeError as e:
+            print(packet)
+            print(packet_id_map)
+            raise TypeError(f"Packet {packet_class} is not in the PacketMap") from e
 
         for key in list(packet.__dict__.keys()):
             final_packet += packet.__dict__[key]
@@ -35,7 +41,7 @@ class Serverbound:
     def __init__(self, socket):
         self.socket = socket
 
-    def receive(self, gamestate, packet_id):
-        packet = GameStates[gamestate]["C2S"][packet_id]().create(self.socket)
+    def receive(self, packet_id):
+        packet = GameStates[get_gamestate()]["C2S"][packet_id]().create(self.socket)
 
         return packet

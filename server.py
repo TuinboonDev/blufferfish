@@ -5,13 +5,10 @@ import os
 import time
 import threading
 
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 
 import Packets.PacketUtil
+
 from Packets.Serverbound.StatusRequest import StatusRequest
 from Packets.Serverbound.PingRequest import PingRequest
 from Packets.Serverbound.LoginStart import LoginStart
@@ -20,6 +17,7 @@ from Packets.Serverbound.EncryptionResponse import EncryptionResponse
 from Packets.Serverbound.LoginAcknowledged import LoginAcknowledged
 from Packets.Serverbound.ServerboundPluginMessage import ServerboundPluginMessage
 from Packets.Serverbound.AcknowledgeFinishConfiguration import AcknowledgeFinishConfiguration
+from Packets.Serverbound.ConfirmTeleportation import ConfirmTeleportation
 
 from Packets.Clientbound.PingResponse import PingResponse
 from Packets.Clientbound.StatusResponse import StatusResponse
@@ -27,10 +25,18 @@ from Packets.Clientbound.EncryptionRequest import EncryptionRequest
 from Packets.Clientbound.LoginSuccess import LoginSuccess
 from Packets.Clientbound.RegistryData import RegistryData
 from Packets.Clientbound.ConfigurationFinish import ConfigurationFinish
+from Packets.Clientbound.LoginPlay import LoginPlay
+from Packets.Clientbound.SynchronizePlayerPosition import SyncronizePlayerPosition
+from Packets.Clientbound.SetDefaultSpawnPosition import SetDefaultSpawnPosition
+from Packets.Clientbound.SetCenterChunk import SetCenterChunk
+from Packets.Clientbound.ChunkDataUpdateLight import ChunkDataUpdateLight
+from Packets.Clientbound.GameEvent import GameEvent
+from Packets.Clientbound.KeepAlive import KeepAlive
 
 from Packets.PacketHandler import Clientbound, Serverbound
 from Packets.PacketUtil import unpack_varint, unpack_encrypted_varint, pack_varint, unpack_varint_bytes
 from Packets.ServerData import ServerData
+from Packets.PacketMap import set_gamestate, get_gamestate
 
 from Encryption import Encryption
 
@@ -50,17 +56,15 @@ def main():
 
     print("Listening on port", PORT)
 
-    next_state = 0
-
     def get_packet(socket):
         packet_length = unpack_varint(socket)
         packet_id = unpack_varint(socket)
-        return serverbound.receive(gamestate, packet_id)
+        return serverbound.receive(packet_id)
 
     def get_encrypted_packet(socket, decryptor):
         packet_length = unpack_encrypted_varint(socket)
         packet_id = unpack_encrypted_varint(socket)
-        return serverbound.receive(gamestate, packet_id)
+        return serverbound.receive(packet_id)
 
     while True:
         client_socket, address = server_socket.accept()
@@ -68,20 +72,20 @@ def main():
         clientbound = Clientbound(client_socket)
         serverbound = Serverbound(client_socket)
 
-        gamestate = "HANDSHAKE"
+        set_gamestate("HANDSHAKE")
 
         print("Connection from", address)
 
-        if gamestate == "HANDSHAKE":
+        if get_gamestate() == "HANDSHAKE":
             packet = get_packet(client_socket)
 
             if isinstance(packet, Handshake):
                 if packet.get("next_state") == 1:
-                    gamestate = "STATUS"
+                    set_gamestate("STATUS")
                 elif packet.get("next_state") == 2:
-                    gamestate = "LOGIN"
+                    set_gamestate("LOGIN")
 
-        if gamestate == "STATUS":
+        if get_gamestate() == "STATUS":
             packet = get_packet(client_socket)
 
             if isinstance(packet, StatusRequest):
@@ -114,7 +118,7 @@ def main():
                 clientbound.send(ping_response)
                 print("Sent ping packet")
 
-        if gamestate == "LOGIN":
+        if get_gamestate() == "LOGIN":
             packet = get_packet(client_socket)
 
             if isinstance(packet, LoginStart):
@@ -174,190 +178,107 @@ def main():
                 #LOGIN ACKNOWLEDGEMENT
                 packet = get_encrypted_packet(client_socket, decryptor)
                 if isinstance(packet, LoginAcknowledged):
-                    gamestate = "CONFIGURATION"
+                    set_gamestate("CONFIGURATION")
                     print("Login Acknowledged")
 
+        if get_gamestate() == "CONFIGURATION":
+            packet = get_encrypted_packet(client_socket, decryptor)
 
-        if gamestate == "CONFIGURATION":
+            if isinstance(packet, ServerboundPluginMessage):
+                print("Plugin Message")
+
+            # Registry Data
+
+            registry_data = RegistryData()
+
+            clientbound.send_encrypted(registry_data, encryptor)
+
+            # configuration finish
+
+            configfinish = ConfigurationFinish()
+
+            clientbound.send_encrypted(configfinish, encryptor)
+
+            packet = get_encrypted_packet(client_socket, decryptor)
+
+            if isinstance(packet, AcknowledgeFinishConfiguration):
+                set_gamestate("PLAY")
+                print("Configuration Finished")
+
+        if get_gamestate() == "PLAY":
+
+            login_play = LoginPlay(
+                1,
+                False,
+                b'',
+                5,
+                12,
+                6,
+                False,
+                True,
+                False,
+                "minecraft:overworld",
+                "minecraft:overworld",
+                123456,
+                "creative",
+                None,
+                False,
+                True,
+                False,
+                None,
+                None,
+                0
+            )
+
+            clientbound.send_encrypted(login_play, encryptor)
+
+
             if True:
-                packet = get_encrypted_packet(client_socket, decryptor)
-
-                if isinstance(packet, ServerboundPluginMessage):
-                    print("Plugin Message")
-
-                #Registry Data
-
-                registry_data = RegistryData()
-
-                clientbound.send_encrypted(registry_data, encryptor)
-
-                #configuration finish
-
-                configfinish = ConfigurationFinish()
-
-                clientbound.send_encrypted(configfinish, encryptor)
-
-                packet = get_encrypted_packet(client_socket, decryptor)
-
-                if isinstance(packet, AcknowledgeFinishConfiguration):
-                    print("Configuration Finished")
-
-
-                #Play packet
-                entity_id = b'\x00\x00\x00\x01'
-                is_hardcore = b'\x00'
-                dimensions = b'' #pack_varint(len('minecraft:overworld')) + 'minecraft:overworld'.encode('utf-8')
-                dimensions_amount = pack_varint(0)
-                max_players = pack_varint(5)
-                view_distance = pack_varint(12)
-                sim_distance = pack_varint(6)
-                reduced_debug_info = b'\x00'
-                respawn_screen = b'\x00'
-                limited_crafting = b'\x00'
-                dimension = pack_varint(len('minecraft:overworld')) + "minecraft:overworld".encode('utf-8')
-                dimension_name = pack_varint(len('minecraft:overworld')) + "minecraft:overworld".encode('utf-8')
-                seed = 123456
-                hashed_seed = struct.pack('>q', seed)
-                gamemode = b'\x01'
-                previous_gamemode = struct.pack('b', -1)
-                is_debug = b'\x00'
-                is_flat = b'\x01'
-                has_death_location = b'\x00'
-                portal_cooldown = b'\x00'
-
-
-                packet = b'\x29' + entity_id + is_hardcore + dimensions_amount + dimensions + max_players + view_distance + sim_distance + reduced_debug_info + respawn_screen + limited_crafting + dimension + dimension_name + hashed_seed + gamemode + previous_gamemode + is_debug + is_flat + has_death_location + portal_cooldown
-
-                packet_length = pack_varint(len(packet))
-
-                client_socket.send(encryptor.update(packet_length + packet))
-
-
-
                 print("Login Success")
 
-                #Sync player pos
-                double_x = struct.pack('d', 10)
-                double_y = struct.pack('d', 100)
-                double_z = struct.pack('d', 10)
+                teleport_id = 123
 
-                float_yaw = struct.pack('f', 0)
-                float_pitch = struct.pack('f', 0)
+                sync_player_pos = SyncronizePlayerPosition(10, 100, 10, 0, 0, b'\x00', teleport_id)
 
-                flags = b'\x00'
-
-                tp_id = pack_varint(123)
-
-                packet = b'\x3E' + double_x + double_y + double_z + float_yaw + float_pitch + flags + tp_id
-
-                packet_length = pack_varint(len(packet))
-
-                client_socket.send(encryptor.update(packet_length + packet))
-
-
+                clientbound.send_encrypted(sync_player_pos, encryptor)
 
                 #Set default spawn pos
 
-                def encode_coordinates(x, z, y):
-                    # Ensure values are within range
-                    x &= 0x3FFFFFF  # 26 bits mask
-                    z &= 0x3FFFFFF  # 26 bits mask
-                    y &= 0xFFF      # 12 bits mask
+                set_default_spawn_pos = SetDefaultSpawnPosition(0, 0, 0, 0)
 
-                    # Combine the values into a single 64-bit integer
-                    encoded_value = (x << 38) | (z << 12) | y
-
-                    # If the highest bit of each coordinate is set (indicating negative value), convert to two's complement
-                    if x & 0x2000000:
-                        x -= 0x4000000
-                    if z & 0x2000000:
-                        z -= 0x4000000
-                    if y & 0x800:
-                        y -= 0x1000
-
-                    return encoded_value
-
-                encoded_value = encode_coordinates(10, 10, 100)
-
-                encoded_bytes = struct.pack('>Q', encoded_value)
-
-                packet = b'\x54' + encoded_bytes + struct.pack('f', 0)
-
-                packet_length = pack_varint(len(packet))
-
-                client_socket.send(encryptor.update(packet_length + packet))
-
+                clientbound.send_encrypted(set_default_spawn_pos, encryptor)
 
                 #Game event packet
 
-                packet = b'\x20' + struct.pack('>B', 13) + struct.pack('f', 0)
-                packet_length = pack_varint(len(packet))
+                game_event = GameEvent(13, 0)
 
-                client_socket.send(encryptor.update(packet_length + packet))
-
-
+                clientbound.send_encrypted(game_event, encryptor)
 
                 #Center chunk
 
-                chunk_x = 0
-                chunk_z = 0
+                set_center_chunk = SetCenterChunk(0, 0)
 
-                packet = b'\x52' + pack_varint(chunk_x) + pack_varint(chunk_z)
-
-                packet_length = pack_varint(len(packet))
-
-                client_socket.send(encryptor.update(packet_length + packet))
-
-
+                clientbound.send_encrypted(set_center_chunk, encryptor)
 
                 #Chunk Data and Update Light
 
-                data = b''
-                data_length = pack_varint(len(data))
+                chunk_data = ChunkDataUpdateLight(0, 0, b'', b'')
 
-                block_entities = b''
-                block_entities_length = pack_varint(len(block_entities))
-
-                stupid_bitsets = b'\x01\x00\x00\x00\x00\x00\x00\x00\x00'
-
-                packet = (b'\x25' + #Packet ID
-                          b'\x00\x00\x00\x00' + # Chunk X
-                          b'\x00\x00\x00\x00' + # Chunk Z
-                          b'\x0A' + #Heightmaps
-                          b'\x00' +
-                          data_length +
-                          data +
-                          block_entities_length +
-                          block_entities +
-                          stupid_bitsets +
-                          stupid_bitsets +
-                          stupid_bitsets +
-                          stupid_bitsets +
-                          data_length +
-                          data +
-                          data_length +
-                          data
-                          )
-
-                packet_length = pack_varint(len(packet))
-
-                client_socket.send(encryptor.update(packet_length + packet))
-
-
+                clientbound.send_encrypted(chunk_data, encryptor)
 
                 #tp confirm
-                #print(decryptor.update(client_socket.recv(1024))) #a
+                packet = get_encrypted_packet(client_socket, decryptor)
 
+                if isinstance(packet, ConfirmTeleportation):
+                    if packet.get("teleport_id") == teleport_id:
+                        print("Teleportation confirmed")
 
                 def keepAlive():
                     while True:
+                        keep_alive = KeepAlive(123)
+
+                        clientbound.send_encrypted(keep_alive, encryptor)
                         time.sleep(29)
-
-                        packet = b'\x24' + struct.pack('>q', 12345678)
-
-                        packet_length = pack_varint(len(packet))
-
-                        client_socket.send(encryptor.update(packet_length + packet))
 
                 threading.Thread(target=keepAlive).start()
 
