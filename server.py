@@ -32,6 +32,9 @@ from Packets.Clientbound.SetCenterChunk import SetCenterChunk
 from Packets.Clientbound.ChunkDataUpdateLight import ChunkDataUpdateLight
 from Packets.Clientbound.GameEvent import GameEvent
 from Packets.Clientbound.KeepAlive import KeepAlive
+from Packets.Clientbound.OpenBook import OpenBook
+from Packets.Clientbound.DisplayObjective import DisplayObjective
+from Packets.Clientbound.PlayerInfoUpdate import PlayerInfoUpdate
 
 from Packets.PacketHandler import Clientbound, Serverbound
 from Packets.PacketUtil import unpack_varint, unpack_encrypted_varint, pack_varint, unpack_varint_bytes
@@ -281,6 +284,7 @@ def main():
                         time.sleep(29)
 
                 threading.Thread(target=keepAlive).start()
+
 
 
                 print('crazy?')

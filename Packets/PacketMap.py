@@ -21,7 +21,9 @@ from Packets.Clientbound.ChunkDataUpdateLight import ChunkDataUpdateLight
 from Packets.Clientbound.GameEvent import GameEvent
 from Packets.Clientbound.KeepAlive import KeepAlive
 from Packets.Clientbound.PingResponse import PingResponse
-
+from Packets.Clientbound.OpenBook import OpenBook
+from Packets.Clientbound.DisplayObjective import DisplayObjective
+from Packets.Clientbound.PlayerInfoUpdate import PlayerInfoUpdate
 
 
 gamestate = "HANDSHAKE"
@@ -81,6 +83,9 @@ GameStates = {
             0x00: ConfirmTeleportation
         },
         "S2C": {
+            0x3C: PlayerInfoUpdate,
+            0x55: DisplayObjective,
+            0x30: OpenBook,
             0x29: LoginPlay,
             0x3E: SyncronizePlayerPosition,
             0x54: SetDefaultSpawnPosition,
