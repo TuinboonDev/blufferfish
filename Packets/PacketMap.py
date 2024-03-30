@@ -24,6 +24,7 @@ from Packets.Clientbound.PingResponse import PingResponse
 from Packets.Clientbound.OpenBook import OpenBook
 from Packets.Clientbound.DisplayObjective import DisplayObjective
 from Packets.Clientbound.PlayerInfoUpdate import PlayerInfoUpdate
+from Packets.Clientbound.SpawnEntity import SpawnEntity
 
 
 gamestate = "HANDSHAKE"
@@ -83,6 +84,7 @@ GameStates = {
             0x00: ConfirmTeleportation
         },
         "S2C": {
+            0x01: SpawnEntity,
             0x3C: PlayerInfoUpdate,
             0x55: DisplayObjective,
             0x30: OpenBook,

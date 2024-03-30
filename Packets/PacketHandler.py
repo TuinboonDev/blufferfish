@@ -18,8 +18,14 @@ class Clientbound:
             print(packet_id_map)
             raise TypeError(f"Packet {packet_class} is not in the PacketMap") from e
 
+
         for key in list(packet.__dict__.keys()):
             final_packet += packet.__dict__[key]
+
+        if packet_class.__name__ == "PlayerInfoUpdate":
+            print(len(final_packet))
+            for x in final_packet:
+                print(x)
 
         try:
             if encryption is not None:

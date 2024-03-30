@@ -13,12 +13,21 @@ def write_paletted_container(bits_per_entry, palette, data_array):
 
     return data
 
+def write_single_valued_paletted_container(entry):
+    data = b''
+    data += struct.pack('b', 0) # bits per entry
+    data += pack_varint(entry)
+    data += struct.pack('b', 0) # data array length
+
+    return data
+
 
 def write_data_ig():
     data = b''
-    data += struct.pack('h', 256) #block count as a short 256 for a 16x16?
-    data += write_paletted_container(0, "block", b'') #block palette
-    data += write_paletted_container(0, "biome", b'') #biome palette
+    for _ in range(24):
+        data += struct.pack('h', 4096) #block count as a short 256 for a 16x16?
+        data += write_single_valued_paletted_container(1) #block palette
+        data += write_single_valued_paletted_container(0)
 
     return data
 

@@ -4,8 +4,13 @@ import json
 import os
 import time
 import threading
+import uuid
+import requests
+import sys
+sys.dont_write_bytecode = True
 
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
+from hashlib import sha1
 
 import Packets.PacketUtil
 
@@ -35,6 +40,7 @@ from Packets.Clientbound.KeepAlive import KeepAlive
 from Packets.Clientbound.OpenBook import OpenBook
 from Packets.Clientbound.DisplayObjective import DisplayObjective
 from Packets.Clientbound.PlayerInfoUpdate import PlayerInfoUpdate
+from Packets.Clientbound.SpawnEntity import SpawnEntity
 
 from Packets.PacketHandler import Clientbound, Serverbound
 from Packets.PacketUtil import unpack_varint, unpack_encrypted_varint, pack_varint, unpack_varint_bytes
@@ -159,6 +165,22 @@ def main():
 
                     shared_secret = private_key.decrypt(shared_secret, PKCS1v15())
 
+                    verification_hash = sha1()
+
+                    verification_hash.update(server_id.encode('utf-8'))
+                    verification_hash.update(shared_secret)
+                    verification_hash.update(public_key_der)
+
+                    number_representation = int.from_bytes(verification_hash.digest(), byteorder='big', signed=True)
+                    hash = format(number_representation, 'x')
+
+                    session_auth = requests.get(f"https://sessionserver.mojang.com/session/minecraft/hasJoined?username={name}&serverId={hash}")
+                    session_json = session_auth.json()
+                    print(session_json)
+                    #TODO: Use retrieved data to verify the player
+
+                    print(hash)
+
                     if private_key.decrypt(verif_token, PKCS1v15()) == verify_token:
                         print("Verification successful")
 
@@ -235,66 +257,64 @@ def main():
 
             clientbound.send_encrypted(login_play, encryptor)
 
+            print("Login Success")
 
-            if True:
-                print("Login Success")
+            teleport_id = 123
 
-                teleport_id = 123
+            sync_player_pos = SyncronizePlayerPosition(10, 100, 10, 0, 0, b'\x00', teleport_id)
 
-                sync_player_pos = SyncronizePlayerPosition(10, 100, 10, 0, 0, b'\x00', teleport_id)
+            clientbound.send_encrypted(sync_player_pos, encryptor)
 
-                clientbound.send_encrypted(sync_player_pos, encryptor)
+            # Set default spawn pos
 
-                #Set default spawn pos
+            set_default_spawn_pos = SetDefaultSpawnPosition(0, 0, 0, 0)
 
-                set_default_spawn_pos = SetDefaultSpawnPosition(0, 0, 0, 0)
+            clientbound.send_encrypted(set_default_spawn_pos, encryptor)
 
-                clientbound.send_encrypted(set_default_spawn_pos, encryptor)
+            # Game event packet
 
-                #Game event packet
+            game_event = GameEvent(13, 0)
 
-                game_event = GameEvent(13, 0)
+            clientbound.send_encrypted(game_event, encryptor)
 
-                clientbound.send_encrypted(game_event, encryptor)
+            # Center chunk
 
-                #Center chunk
+            set_center_chunk = SetCenterChunk(0, 0)
 
-                set_center_chunk = SetCenterChunk(0, 0)
+            clientbound.send_encrypted(set_center_chunk, encryptor)
 
-                clientbound.send_encrypted(set_center_chunk, encryptor)
+            # Chunk Data and Update Light
 
-                #Chunk Data and Update Light
+            chunk_data_update_light = ChunkDataUpdateLight(0, 0, b'', b'')
+            clientbound.send_encrypted(chunk_data_update_light, encryptor)
 
-                chunk_data = ChunkDataUpdateLight(0, 0, b'', b'')
+            # tp confirm
+            packet = get_encrypted_packet(client_socket, decryptor)
 
-                clientbound.send_encrypted(chunk_data, encryptor)
+            if isinstance(packet, ConfirmTeleportation):
+                if packet.get("teleport_id") == teleport_id:
+                    print("Teleportation confirmed")
 
-                #tp confirm
-                packet = get_encrypted_packet(client_socket, decryptor)
+            def keepAlive():
+                while True:
+                    keep_alive = KeepAlive(123)
 
-                if isinstance(packet, ConfirmTeleportation):
-                    if packet.get("teleport_id") == teleport_id:
-                        print("Teleportation confirmed")
+                    clientbound.send_encrypted(keep_alive, encryptor)
+                    time.sleep(29)
 
-                def keepAlive():
-                    while True:
-                        keep_alive = KeepAlive(123)
+            threading.Thread(target=keepAlive).start()
 
-                        clientbound.send_encrypted(keep_alive, encryptor)
-                        time.sleep(29)
+            add_player = PlayerInfoUpdate([0x01, 0x08], [{"uuid": uuid_bytes, "name": name, "show": True}],
+                                          {"name": session_json["properties"][0]["name"],
+                                           "value": session_json["properties"][0]["value"],
+                                           "is_signed": True,
+                                           "signature": session_json["properties"][0]["signature"]})
 
-                threading.Thread(target=keepAlive).start()
+            clientbound.send_encrypted(add_player, encryptor)
 
+            print('crazy?')
 
-
-                print('crazy?')
-
-
-
-            next_state = 0
-
-
-        #client_socket.close()
+    # client_socket.close()
 
 if __name__ == "__main__":
     main()
