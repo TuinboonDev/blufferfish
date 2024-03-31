@@ -22,10 +22,11 @@ class Clientbound:
         for key in list(packet.__dict__.keys()):
             final_packet += packet.__dict__[key]
 
-        if packet_class.__name__ == "PlayerInfoUpdate":
+        if packet_class.__name__ == "SetEntityMetadata":
             print(len(final_packet))
             for x in final_packet:
                 print(x)
+            pass
 
         try:
             if encryption is not None:
@@ -47,7 +48,10 @@ class Serverbound:
     def __init__(self, socket):
         self.socket = socket
 
-    def receive(self, packet_id):
-        packet = GameStates[get_gamestate()]["C2S"][packet_id]().create(self.socket)
+    def receive(self, packet_length, packet_id):
+        if not packet_id in GameStates[get_gamestate()]["C2S"]:
+            raise ValueError(f"Packet ID {packet_id} is not in the PacketMap")
+
+        packet = GameStates[get_gamestate()]["C2S"][packet_id]().create(packet_length, self.socket)
 
         return packet

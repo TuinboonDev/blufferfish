@@ -1,14 +1,14 @@
 from Packets.PacketUtil import unpack_varint
 
 class EncryptionResponse:
-    def create(self, socket):
-        shared_secret_length = unpack_varint(socket)
+    def create(self, remaining_packet_length, socket):
+        shared_secret_length, byte_length = unpack_varint(socket)
 
         shared_secret = b""
         for i in range(shared_secret_length):
             shared_secret += socket.recv(1)
 
-        verify_token_length = unpack_varint(socket)
+        verify_token_length, byte_length = unpack_varint(socket)
         verify_token = b""
         for i in range(verify_token_length):
             verify_token += socket.recv(1)

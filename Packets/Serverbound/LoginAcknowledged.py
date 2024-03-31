@@ -2,7 +2,7 @@ import struct
 from Packets.PacketUtil import unpack_varint
 
 class LoginAcknowledged:
-    def create(self, socket):
+    def create(self, remaining_packet_length, socket):
 
         return self
 

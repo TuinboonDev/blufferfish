@@ -1,8 +1,8 @@
 from Packets.PacketUtil import unpack_varint
 
 class LoginStart:
-    def create(self, socket):
-        name_length = unpack_varint(socket)
+    def create(self, remaining_packet_length, socket):
+        name_length, byte_length = unpack_varint(socket)
         name = ""
         for i in range(name_length):
             name += socket.recv(1).decode('utf-8')

@@ -1,8 +1,8 @@
 from Packets.PacketUtil import unpack_encrypted_varint
 
 class ConfirmTeleportation:
-    def create(self, socket):
-        teleport_id = unpack_encrypted_varint(socket)
+    def create(self, remaining_packet_length, socket):
+        teleport_id, byte_length = unpack_encrypted_varint(socket)
 
         self.teleport_id = teleport_id
         return self

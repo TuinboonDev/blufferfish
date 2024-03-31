@@ -7,6 +7,7 @@ from Packets.Serverbound.LoginAcknowledged import LoginAcknowledged
 from Packets.Serverbound.ServerboundPluginMessage import ServerboundPluginMessage
 from Packets.Serverbound.AcknowledgeFinishConfiguration import AcknowledgeFinishConfiguration
 from Packets.Serverbound.ConfirmTeleportation import ConfirmTeleportation
+from Packets.Serverbound.ClientInformation import ClientInformation
 
 from Packets.Clientbound.StatusResponse import StatusResponse
 from Packets.Clientbound.LoginSuccess import LoginSuccess
@@ -25,6 +26,7 @@ from Packets.Clientbound.OpenBook import OpenBook
 from Packets.Clientbound.DisplayObjective import DisplayObjective
 from Packets.Clientbound.PlayerInfoUpdate import PlayerInfoUpdate
 from Packets.Clientbound.SpawnEntity import SpawnEntity
+from Packets.Clientbound.SetEntityMetadata import SetEntityMetadata
 
 
 gamestate = "HANDSHAKE"
@@ -70,6 +72,7 @@ GameStates = {
 
     "CONFIGURATION": {
         "C2S": {
+            0x00: ClientInformation,
             0x01: ServerboundPluginMessage,
             0x02: AcknowledgeFinishConfiguration
         },
@@ -94,7 +97,8 @@ GameStates = {
             0x52: SetCenterChunk,
             0x25: ChunkDataUpdateLight,
             0x20: GameEvent,
-            0x24: KeepAlive
+            0x24: KeepAlive,
+            0x56: SetEntityMetadata
         }
     }
 }

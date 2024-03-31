@@ -23,6 +23,7 @@ from Packets.Serverbound.LoginAcknowledged import LoginAcknowledged
 from Packets.Serverbound.ServerboundPluginMessage import ServerboundPluginMessage
 from Packets.Serverbound.AcknowledgeFinishConfiguration import AcknowledgeFinishConfiguration
 from Packets.Serverbound.ConfirmTeleportation import ConfirmTeleportation
+from Packets.Serverbound.ClientInformation import ClientInformation
 
 from Packets.Clientbound.PingResponse import PingResponse
 from Packets.Clientbound.StatusResponse import StatusResponse
@@ -39,6 +40,7 @@ from Packets.Clientbound.GameEvent import GameEvent
 from Packets.Clientbound.KeepAlive import KeepAlive
 from Packets.Clientbound.OpenBook import OpenBook
 from Packets.Clientbound.DisplayObjective import DisplayObjective
+from Packets.Clientbound.SetEntityMetadata import SetEntityMetadata
 from Packets.Clientbound.PlayerInfoUpdate import PlayerInfoUpdate
 from Packets.Clientbound.SpawnEntity import SpawnEntity
 
@@ -48,6 +50,7 @@ from Packets.ServerData import ServerData
 from Packets.PacketMap import set_gamestate, get_gamestate
 
 from Encryption import Encryption
+from Networking import Networking
 
 def main():
     # Define the port to listen on
@@ -65,19 +68,21 @@ def main():
 
     print("Listening on port", PORT)
 
-    def get_packet(socket):
-        packet_length = unpack_varint(socket)
-        packet_id = unpack_varint(socket)
-        return serverbound.receive(packet_id)
+    def get_packet(serverbound, socket):
+        packet_length, byte_length = unpack_varint(socket)
 
-    def get_encrypted_packet(socket, decryptor):
-        packet_length = unpack_encrypted_varint(socket)
-        packet_id = unpack_encrypted_varint(socket)
-        return serverbound.receive(packet_id)
+        packet_id, byte_length = unpack_varint(socket)
+        packet_length -= byte_length
+        return serverbound.receive(packet_length, packet_id)
 
-    while True:
-        client_socket, address = server_socket.accept()
+    def get_encrypted_packet(serverbound, socket):
+        packet_length, byte_length = unpack_encrypted_varint(socket)
 
+        packet_id, byte_length = unpack_encrypted_varint(socket)
+        packet_length -= byte_length
+        return serverbound.receive(packet_length, packet_id)
+    
+    def handle(client_socket, networking):
         clientbound = Clientbound(client_socket)
         serverbound = Serverbound(client_socket)
 
@@ -86,7 +91,7 @@ def main():
         print("Connection from", address)
 
         if get_gamestate() == "HANDSHAKE":
-            packet = get_packet(client_socket)
+            packet = get_packet(serverbound, client_socket)
 
             if isinstance(packet, Handshake):
                 if packet.get("next_state") == 1:
@@ -95,7 +100,7 @@ def main():
                     set_gamestate("LOGIN")
 
         if get_gamestate() == "STATUS":
-            packet = get_packet(client_socket)
+            packet = get_packet(serverbound, client_socket)
 
             if isinstance(packet, StatusRequest):
                 sample = [
@@ -107,7 +112,7 @@ def main():
                     "BlufferFish 1.20.4",
                     765,
                     5,
-                    2,
+                    -5,
                     sample,
                     "\u00A73Bluffer\u00A7eFish",
                     "icon.png",
@@ -120,7 +125,7 @@ def main():
                 clientbound.send(SLP_packet)
 
 
-            packet = get_packet(client_socket)
+            packet = get_packet(serverbound, client_socket)
 
             if isinstance(packet, PingRequest):
                 ping_response = PingResponse(packet.get("time"))
@@ -128,7 +133,7 @@ def main():
                 print("Sent ping packet")
 
         if get_gamestate() == "LOGIN":
-            packet = get_packet(client_socket)
+            packet = get_packet(serverbound, client_socket)
 
             if isinstance(packet, LoginStart):
                 name = packet.get("name")
@@ -157,7 +162,7 @@ def main():
                 print("Sent encryption request")
 
 
-                packet = get_packet(client_socket)
+                packet = get_packet(serverbound, client_socket)
 
                 if isinstance(packet, EncryptionResponse):
                     shared_secret = packet.get("shared_secret")
@@ -192,6 +197,8 @@ def main():
                         encryptor = cipher.encryptor()
                         decryptor = cipher.decryptor()
 
+                        networking.add_encryptor(client_socket, encryptor)
+
                         Packets.PacketUtil.decryptor = decryptor
 
                         login_success = LoginSuccess(uuid_bytes, name, b'')
@@ -201,16 +208,24 @@ def main():
                 print("Sent login success")
 
                 #LOGIN ACKNOWLEDGEMENT
-                packet = get_encrypted_packet(client_socket, decryptor)
+                packet = get_encrypted_packet(serverbound, client_socket)
                 if isinstance(packet, LoginAcknowledged):
                     set_gamestate("CONFIGURATION")
                     print("Login Acknowledged")
 
         if get_gamestate() == "CONFIGURATION":
-            packet = get_encrypted_packet(client_socket, decryptor)
+            packet = get_encrypted_packet(serverbound, client_socket)
 
             if isinstance(packet, ServerboundPluginMessage):
+                #print(packet.get("identifier"))
+                #print(packet.get("data"))
                 print("Plugin Message")
+
+            packet = get_encrypted_packet(serverbound, client_socket)
+
+            if isinstance(packet, ClientInformation):
+                skin_parts = packet.get("displayed_skin_parts")
+                print("Client info")
 
             # Registry Data
 
@@ -224,7 +239,7 @@ def main():
 
             clientbound.send_encrypted(configfinish, encryptor)
 
-            packet = get_encrypted_packet(client_socket, decryptor)
+            packet = get_encrypted_packet(serverbound, client_socket)
 
             if isinstance(packet, AcknowledgeFinishConfiguration):
                 set_gamestate("PLAY")
@@ -233,7 +248,7 @@ def main():
         if get_gamestate() == "PLAY":
 
             login_play = LoginPlay(
-                1,
+                entity_id,
                 False,
                 b'',
                 5,
@@ -289,7 +304,7 @@ def main():
             clientbound.send_encrypted(chunk_data_update_light, encryptor)
 
             # tp confirm
-            packet = get_encrypted_packet(client_socket, decryptor)
+            packet = get_encrypted_packet(serverbound, client_socket)
 
             if isinstance(packet, ConfirmTeleportation):
                 if packet.get("teleport_id") == teleport_id:
@@ -310,11 +325,31 @@ def main():
                                            "is_signed": True,
                                            "signature": session_json["properties"][0]["signature"]})
 
-            clientbound.send_encrypted(add_player, encryptor)
+            #clientbound.send_encrypted(add_player, encryptor)
+            networking.broadcast(add_player)
+
+            set_entity_metadata = SetEntityMetadata(entity_id, 17, 0, skin_parts)
+
+            clientbound.send_encrypted(set_entity_metadata, encryptor)
 
             print('crazy?')
 
-    # client_socket.close()
+
+
+    networking = Networking()
+
+    entity_id = 0
+
+    while True:
+        client_socket, address = server_socket.accept()
+
+        networking.add_client(client_socket)
+
+        entity_id += 1
+
+        new_connection = threading.Thread(target=handle, args=(client_socket, networking))
+        new_connection.start()
+        
 
 if __name__ == "__main__":
     main()

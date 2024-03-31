@@ -2,9 +2,9 @@ import struct
 from Packets.PacketUtil import unpack_varint
 
 class Handshake:
-    def create(self, socket):
-        protocol_version = unpack_varint(socket)
-        server_address_length = unpack_varint(socket)
+    def create(self, remaining_packet_length, socket):
+        protocol_version, byte_length = unpack_varint(socket)
+        server_address_length, byte_length = unpack_varint(socket)
         server_address = ""
         for i in range(server_address_length):
             server_address += socket.recv(1).decode("utf-8")

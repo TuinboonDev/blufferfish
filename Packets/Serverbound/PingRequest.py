@@ -1,5 +1,5 @@
 class PingRequest:
-    def create(self, socket):
+    def create(self, remaining_packet_length, socket):
         time = socket.recv(8)
 
         self.time = time
