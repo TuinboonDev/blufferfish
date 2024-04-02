@@ -24,10 +24,15 @@ def write_single_valued_paletted_container(entry):
 
 def write_data_ig():
     data = b''
+    switch = 1
     for _ in range(24):
-        data += struct.pack('h', 4096) #block count as a short 256 for a 16x16?
-        data += write_single_valued_paletted_container(1) #block palette
-        data += write_single_valued_paletted_container(0)
+        data += struct.pack('h', 4096)
+        data += write_single_valued_paletted_container(switch) #block palette
+        data += write_single_valued_paletted_container(0) #bioma palette
+        if switch == 1:
+            switch = 9
+        elif switch == 9:
+            switch = 1
 
     return data
 

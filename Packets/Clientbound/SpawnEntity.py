@@ -7,9 +7,6 @@ class SpawnEntity:
 
         entity_type = pack_varint(entity_type)
 
-        print(entity_id)
-        print(int.from_bytes(entity_id, byteorder='big', signed=False))
-
         x = struct.pack('d', x)
         y = struct.pack('d', y)
         z = struct.pack('d', z)

@@ -51,6 +51,7 @@ from Packets.PacketMap import set_gamestate, get_gamestate
 
 from Encryption import Encryption
 from Networking import Networking
+from Handlers.GeneralPlayerHandler import GeneralPlayerHandler
 
 def main():
     # Define the port to listen on
@@ -210,6 +211,7 @@ def main():
                 #LOGIN ACKNOWLEDGEMENT
                 packet = get_encrypted_packet(serverbound, client_socket)
                 if isinstance(packet, LoginAcknowledged):
+                    general_player_handler.add_player(name, uuid_bytes, session_json["properties"])
                     set_gamestate("CONFIGURATION")
                     print("Login Acknowledged")
 
@@ -246,6 +248,8 @@ def main():
                 print("Configuration Finished")
 
         if get_gamestate() == "PLAY":
+            entity_id = general_player_handler.get_entity_id(uuid_bytes)
+
 
             login_play = LoginPlay(
                 entity_id,
@@ -276,7 +280,7 @@ def main():
 
             teleport_id = 123
 
-            sync_player_pos = SyncronizePlayerPosition(10, 100, 10, 0, 0, b'\x00', teleport_id)
+            sync_player_pos = SyncronizePlayerPosition(0, 100, 0, 0, 0, b'\x00', teleport_id)
 
             clientbound.send_encrypted(sync_player_pos, encryptor)
 
@@ -319,24 +323,46 @@ def main():
 
             threading.Thread(target=keepAlive).start()
 
-            add_player = PlayerInfoUpdate([0x01, 0x08], [{"uuid": uuid_bytes, "name": name, "show": True}],
-                                          {"name": session_json["properties"][0]["name"],
-                                           "value": session_json["properties"][0]["value"],
-                                           "is_signed": True,
-                                           "signature": session_json["properties"][0]["signature"]})
+            print(uuid_bytes, name)
 
-            #clientbound.send_encrypted(add_player, encryptor)
-            networking.broadcast(add_player)
+            all_players = general_player_handler.get_online_players()
+
+            for player in all_players:
+                add_player = PlayerInfoUpdate([0x01, 0x08], [{"uuid": player["uuid"], "name": player["name"], "show": True}],
+                                              {"name": player["properties"][0]["name"],
+                                               "value": player["properties"][0]["value"],
+                                               "is_signed": True,
+                                               "signature": player["properties"][0]["signature"]})
+
+
+                networking.broadcast(add_player)
+
+            #--------------------------------------------
+
+            other_players = general_player_handler.get_all_other_players(name)
+
+            for player in other_players:
+                spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 0, 0, 0, b'\x00', b'\x00', b'\x00', 0, 0, 0, 0)
+
+                #networking.broadcast(spawn_entity)
+                clientbound.send_encrypted(spawn_entity, encryptor)
+
+            #--------------------------------------------
+
+            print(entity_id)
 
             set_entity_metadata = SetEntityMetadata(entity_id, 17, 0, skin_parts)
 
-            clientbound.send_encrypted(set_entity_metadata, encryptor)
+            networking.broadcast(set_entity_metadata)
+            #clientbound.send_encrypted(set_entity_metadata, encryptor)
 
             print('crazy?')
 
 
 
     networking = Networking()
+
+    general_player_handler = GeneralPlayerHandler()
 
     entity_id = 0
 
@@ -345,10 +371,10 @@ def main():
 
         networking.add_client(client_socket)
 
-        entity_id += 1
-
         new_connection = threading.Thread(target=handle, args=(client_socket, networking))
         new_connection.start()
+
+        entity_id += 1
         
 
 if __name__ == "__main__":

@@ -23,9 +23,9 @@ class Clientbound:
             final_packet += packet.__dict__[key]
 
         if packet_class.__name__ == "SetEntityMetadata":
-            print(len(final_packet))
-            for x in final_packet:
-                print(x)
+            #print(len(final_packet))
+            #for x in final_packet:
+            #    print(x)
             pass
 
         try:
