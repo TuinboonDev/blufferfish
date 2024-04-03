@@ -2,9 +2,9 @@ from Packets.PacketUtil import pack_varint
 import struct
 class SyncronizePlayerPosition:
     def __init__(self, x, y, z, yaw, pitch, flags, teleport_id):
-        double_x = struct.pack('d', x)
-        double_y = struct.pack('d', y)
-        double_z = struct.pack('d', z)
+        double_x = struct.pack('>d', x)
+        double_y = struct.pack('>d', y)
+        double_z = struct.pack('>d', z)
 
         float_yaw = struct.pack('f', yaw)
         float_pitch = struct.pack('f', pitch)

@@ -14,18 +14,17 @@ class Clientbound:
         try:
             final_packet = pack_varint(packet_id_map.get(packet_class))
         except TypeError as e:
-            print(packet)
-            print(packet_id_map)
             raise TypeError(f"Packet {packet_class} is not in the PacketMap") from e
 
 
         for key in list(packet.__dict__.keys()):
             final_packet += packet.__dict__[key]
 
-        if packet_class.__name__ == "SetEntityMetadata":
+        if packet_class.__name__ == "SyncronizePlayerPosition" or packet_class.__name__ == "SetDefaultSpawnPosition":
             #print(len(final_packet))
             #for x in final_packet:
             #    print(x)
+            #print("\n")
             pass
 
         try:

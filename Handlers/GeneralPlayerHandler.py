@@ -3,8 +3,8 @@ class GeneralPlayerHandler:
         self.players = []
         self.player_count = 0
 
-    def add_player(self, name, uuid, properties):
-        self.players.append({"name": name, "uuid": uuid, "entity_id": self.player_count, "properties": properties})
+    def add_player(self, name, uuid, properties, skin_parts, socket):
+        self.players.append({"name": name, "uuid": uuid, "entity_id": self.player_count, "properties": properties, "skin_parts": skin_parts, "socket": socket})
         self.player_count += 1
 
     def remove_player(self, uuid):

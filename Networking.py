@@ -9,6 +9,11 @@ class Networking:
         for client in self.clients:
             Clientbound(client).send_encrypted(packet, self.get_encryptor(client))
 
+    def send_to_others(self, packet, sender):
+        for client in self.clients:
+            if client != sender:
+                Clientbound(client).send_encrypted(packet, self.get_encryptor(client))
+
     def add_encryptor(self, socket, encryptor):
         self.clients[socket] = encryptor
 

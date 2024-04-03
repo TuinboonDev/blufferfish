@@ -24,6 +24,8 @@ from Packets.Serverbound.ServerboundPluginMessage import ServerboundPluginMessag
 from Packets.Serverbound.AcknowledgeFinishConfiguration import AcknowledgeFinishConfiguration
 from Packets.Serverbound.ConfirmTeleportation import ConfirmTeleportation
 from Packets.Serverbound.ClientInformation import ClientInformation
+from Packets.Serverbound.SetPlayerPosition import SetPlayerPosition
+from Packets.Serverbound.SetPlayerPositionRotation import SetPlayerPositionRotation
 
 from Packets.Clientbound.PingResponse import PingResponse
 from Packets.Clientbound.StatusResponse import StatusResponse
@@ -43,9 +45,10 @@ from Packets.Clientbound.DisplayObjective import DisplayObjective
 from Packets.Clientbound.SetEntityMetadata import SetEntityMetadata
 from Packets.Clientbound.PlayerInfoUpdate import PlayerInfoUpdate
 from Packets.Clientbound.SpawnEntity import SpawnEntity
+from Packets.Clientbound.UpdateEntityPosition import UpdateEntityPosition
 
 from Packets.PacketHandler import Clientbound, Serverbound
-from Packets.PacketUtil import unpack_varint, unpack_encrypted_varint, pack_varint, unpack_varint_bytes
+from Packets.PacketUtil import unpack_varint, unpack_encrypted_varint, pack_varint, unpack_varint_bytes, decrypt_byte
 from Packets.ServerData import ServerData
 from Packets.PacketMap import set_gamestate, get_gamestate
 
@@ -211,7 +214,6 @@ def main():
                 #LOGIN ACKNOWLEDGEMENT
                 packet = get_encrypted_packet(serverbound, client_socket)
                 if isinstance(packet, LoginAcknowledged):
-                    general_player_handler.add_player(name, uuid_bytes, session_json["properties"])
                     set_gamestate("CONFIGURATION")
                     print("Login Acknowledged")
 
@@ -227,6 +229,7 @@ def main():
 
             if isinstance(packet, ClientInformation):
                 skin_parts = packet.get("displayed_skin_parts")
+                general_player_handler.add_player(name, uuid_bytes, session_json["properties"], skin_parts, client_socket)
                 print("Client info")
 
             # Registry Data
@@ -280,13 +283,13 @@ def main():
 
             teleport_id = 123
 
-            sync_player_pos = SyncronizePlayerPosition(0, 100, 0, 0, 0, b'\x00', teleport_id)
+            sync_player_pos = SyncronizePlayerPosition(0,320,0, 0, 0, b'\x00', teleport_id)
 
             clientbound.send_encrypted(sync_player_pos, encryptor)
 
             # Set default spawn pos
 
-            set_default_spawn_pos = SetDefaultSpawnPosition(0, 0, 0, 0)
+            set_default_spawn_pos = SetDefaultSpawnPosition(0, 320, 0, 0)
 
             clientbound.send_encrypted(set_default_spawn_pos, encryptor)
 
@@ -323,8 +326,6 @@ def main():
 
             threading.Thread(target=keepAlive).start()
 
-            print(uuid_bytes, name)
-
             all_players = general_player_handler.get_online_players()
 
             for player in all_players:
@@ -337,24 +338,68 @@ def main():
 
                 networking.broadcast(add_player)
 
+            #TODO: change this so it doesnt keep sending to every client
+
             #--------------------------------------------
 
             other_players = general_player_handler.get_all_other_players(name)
 
             for player in other_players:
-                spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 0, 0, 0, b'\x00', b'\x00', b'\x00', 0, 0, 0, 0)
+                spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 0, 320, 0, b'\x00', b'\x00', b'\x00', 0, 0, 0, 0)
 
-                #networking.broadcast(spawn_entity)
                 clientbound.send_encrypted(spawn_entity, encryptor)
 
             #--------------------------------------------
 
-            print(entity_id)
+            player_count = general_player_handler.get_player_count()
 
-            set_entity_metadata = SetEntityMetadata(entity_id, 17, 0, skin_parts)
+            if player_count - 1 > 0:
+                for player in all_players:
+                    if player["name"] == name:
+                        spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 0, 320, 0, b'\x00', b'\x00', b'\x00', 0, 0, 0, 0)
+                        networking.send_to_others(spawn_entity, client_socket)
 
-            networking.broadcast(set_entity_metadata)
-            #clientbound.send_encrypted(set_entity_metadata, encryptor)
+
+
+
+            for player in all_players:
+                set_entity_metadata = SetEntityMetadata(player["entity_id"], 17, 0, player["skin_parts"])
+
+                networking.broadcast(set_entity_metadata)
+
+            def keepListening():
+                prevX = 0
+                prevY = 320
+                prevZ = 0
+                while True:
+                    #general_player_handler.get_online_players()[0]["socket"]
+
+
+
+                    packet = get_encrypted_packet(serverbound, client_socket)
+                    if isinstance(packet, SetPlayerPosition) or isinstance(packet, SetPlayerPositionRotation):
+                        on_ground = packet.get("on_ground")
+                        print(prevX, prevY, prevZ)
+                        currentX = struct.unpack('>d', packet.get("x"))[0]
+                        currentY = struct.unpack('>d', packet.get("y"))[0]
+                        currentZ = struct.unpack('>d', packet.get("z"))[0]
+
+                        delta_x = int(currentX * 32 - prevX * 32) * 128
+                        delta_y = int(currentY * 32 - prevY * 32) * 128
+                        delta_z = int(currentZ * 32 - prevZ * 32) * 128
+
+                        print(delta_x, delta_y, delta_z)
+
+                        update_entity_position = UpdateEntityPosition(entity_id, delta_x, delta_y, delta_z, on_ground)
+
+                        networking.broadcast(update_entity_position)
+
+                        prevX = currentX
+                        prevY = currentY
+                        prevZ = currentZ
+
+
+            threading.Thread(target=keepListening).start()
 
             print('crazy?')
 
@@ -368,6 +413,8 @@ def main():
 
     while True:
         client_socket, address = server_socket.accept()
+
+        test = ''
 
         networking.add_client(client_socket)
 

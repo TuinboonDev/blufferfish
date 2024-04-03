@@ -7,9 +7,9 @@ class SpawnEntity:
 
         entity_type = pack_varint(entity_type)
 
-        x = struct.pack('d', x)
-        y = struct.pack('d', y)
-        z = struct.pack('d', z)
+        x = struct.pack('>d', x)
+        y = struct.pack('>d', y)
+        z = struct.pack('>d', z)
 
         data = pack_varint(data)
 

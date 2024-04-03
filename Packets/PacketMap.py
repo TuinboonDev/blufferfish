@@ -8,6 +8,12 @@ from Packets.Serverbound.ServerboundPluginMessage import ServerboundPluginMessag
 from Packets.Serverbound.AcknowledgeFinishConfiguration import AcknowledgeFinishConfiguration
 from Packets.Serverbound.ConfirmTeleportation import ConfirmTeleportation
 from Packets.Serverbound.ClientInformation import ClientInformation
+from Packets.Serverbound.SetPlayerPosition import SetPlayerPosition
+from Packets.Serverbound.SetPlayerPositionRotation import SetPlayerPositionRotation
+from Packets.Serverbound.PlayerSession import PlayerSession
+from Packets.Serverbound.SetPlayerOnGround import SetPlayerOnGround
+from Packets.Serverbound.SetPlayerRotation import SetPlayerRotation
+from Packets.Serverbound.ServerboundKeepAlive import ServerboundKeepAlive
 
 from Packets.Clientbound.StatusResponse import StatusResponse
 from Packets.Clientbound.LoginSuccess import LoginSuccess
@@ -27,7 +33,7 @@ from Packets.Clientbound.DisplayObjective import DisplayObjective
 from Packets.Clientbound.PlayerInfoUpdate import PlayerInfoUpdate
 from Packets.Clientbound.SpawnEntity import SpawnEntity
 from Packets.Clientbound.SetEntityMetadata import SetEntityMetadata
-
+from Packets.Clientbound.UpdateEntityPosition import UpdateEntityPosition
 
 gamestate = "HANDSHAKE"
 def set_gamestate(state):
@@ -84,9 +90,16 @@ GameStates = {
 
     "PLAY": {
         "C2S": {
+            0x15: ServerboundKeepAlive,
+            0x19: SetPlayerRotation,
+            0x1A: SetPlayerOnGround,
+            0x06: PlayerSession,
+            0x18: SetPlayerPositionRotation,
+            0x17: SetPlayerPosition,
             0x00: ConfirmTeleportation
         },
         "S2C": {
+            0x2C: UpdateEntityPosition,
             0x01: SpawnEntity,
             0x3C: PlayerInfoUpdate,
             0x55: DisplayObjective,
