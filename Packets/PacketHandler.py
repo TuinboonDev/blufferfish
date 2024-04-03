@@ -48,6 +48,7 @@ class Serverbound:
         self.socket = socket
 
     def receive(self, packet_length, packet_id):
+        print(packet_id)
         if not packet_id in GameStates[get_gamestate()]["C2S"]:
             raise ValueError(f"Packet ID {packet_id} is not in the PacketMap")
 

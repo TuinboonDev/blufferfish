@@ -11,9 +11,7 @@ class SetPlayerPositionRotation:
 
         on_ground = decrypt_byte(socket.recv(1))
 
-        print(remaining_packet_length)
-
-        print(bytes("SetPlayerPositionRotation".encode("utf-8")), decrypt_byte(socket.recv(1024)))
+        #print(bytes("SetPlayerPositionRotation".encode("utf-8")), decrypt_byte(socket.recv(1024)))
 
         self.x = x
         self.y = y

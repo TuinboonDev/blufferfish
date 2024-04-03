@@ -8,9 +8,7 @@ class SetPlayerPosition:
 
         on_ground = decrypt_byte(socket.recv(1))
 
-        print(remaining_packet_length)
-
-        print(bytes("SetPlayerPosition".encode("utf-8")), decrypt_byte(socket.recv(1024)))
+        #print(bytes("SetPlayerPosition".encode("utf-8")), decrypt_byte(socket.recv(1024)))
 
         self.x = x
         self.y = y

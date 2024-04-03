@@ -10,9 +10,11 @@ class PlayerSession:
         key_signature_length = unpack_encrypted_varint(socket)[0]
         key_signature = socket.recv(key_signature_length)
 
-        print(remaining_packet_length)
-
         print(bytes("PlayerSession".encode("utf-8")), decrypt_byte(socket.recv(1024)))
+        self.session_id = session_id
+        self.expires_at = expires_at
+        self.public_key = public_key
+        self.key_signature = key_signature
         return self
 
     def get(self, item):

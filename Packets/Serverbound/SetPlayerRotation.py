@@ -7,9 +7,7 @@ class SetPlayerRotation:
 
         on_ground = decrypt_byte(socket.recv(1))
 
-        print(remaining_packet_length)
-
-        print(bytes("SetPlayerRotation".encode("utf-8")), decrypt_byte(socket.recv(1024)))
+        #print(bytes("SetPlayerRotation".encode("utf-8")), decrypt_byte(socket.recv(1024)))
 
         self.yaw = yaw
         self.pitch = pitch

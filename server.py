@@ -26,6 +26,7 @@ from Packets.Serverbound.ConfirmTeleportation import ConfirmTeleportation
 from Packets.Serverbound.ClientInformation import ClientInformation
 from Packets.Serverbound.SetPlayerPosition import SetPlayerPosition
 from Packets.Serverbound.SetPlayerPositionRotation import SetPlayerPositionRotation
+from Packets.Serverbound.SetPlayerRotation import SetPlayerRotation
 
 from Packets.Clientbound.PingResponse import PingResponse
 from Packets.Clientbound.StatusResponse import StatusResponse
@@ -46,6 +47,9 @@ from Packets.Clientbound.SetEntityMetadata import SetEntityMetadata
 from Packets.Clientbound.PlayerInfoUpdate import PlayerInfoUpdate
 from Packets.Clientbound.SpawnEntity import SpawnEntity
 from Packets.Clientbound.UpdateEntityPosition import UpdateEntityPosition
+from Packets.Clientbound.SetHeldItem import SetHeldItem
+from Packets.Clientbound.UpdateEntityPositionRotation import UpdateEntityPositionRotation
+from Packets.Clientbound.UpdateEntityRotation import UpdateEntityRotation
 
 from Packets.PacketHandler import Clientbound, Serverbound
 from Packets.PacketUtil import unpack_varint, unpack_encrypted_varint, pack_varint, unpack_varint_bytes, decrypt_byte
@@ -281,15 +285,21 @@ def main():
 
             print("Login Success")
 
+            set_held_item = SetHeldItem(b'\x00')
+
+            clientbound.send_encrypted(set_held_item, encryptor)
+
+            # ----
+
             teleport_id = 123
 
-            sync_player_pos = SyncronizePlayerPosition(0,320,0, 0, 0, b'\x00', teleport_id)
+            sync_player_pos = SyncronizePlayerPosition(8,320,8, 0, 0, b'\x00', teleport_id)
 
             clientbound.send_encrypted(sync_player_pos, encryptor)
 
             # Set default spawn pos
 
-            set_default_spawn_pos = SetDefaultSpawnPosition(0, 320, 0, 0)
+            set_default_spawn_pos = SetDefaultSpawnPosition(8, 320, 8, 0)
 
             clientbound.send_encrypted(set_default_spawn_pos, encryptor)
 
@@ -345,7 +355,7 @@ def main():
             other_players = general_player_handler.get_all_other_players(name)
 
             for player in other_players:
-                spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 0, 320, 0, b'\x00', b'\x00', b'\x00', 0, 0, 0, 0)
+                spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 8, 320, 8, b'\x00', b'\x00', b'\x00', 0, 0, 0, 0)
 
                 clientbound.send_encrypted(spawn_entity, encryptor)
 
@@ -356,7 +366,7 @@ def main():
             if player_count - 1 > 0:
                 for player in all_players:
                     if player["name"] == name:
-                        spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 0, 320, 0, b'\x00', b'\x00', b'\x00', 0, 0, 0, 0)
+                        spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 8, 320, 8, b'\x00', b'\x00', b'\x00', 0, 0, 0, 0)
                         networking.send_to_others(spawn_entity, client_socket)
 
 
@@ -368,9 +378,9 @@ def main():
                 networking.broadcast(set_entity_metadata)
 
             def keepListening():
-                prevX = 0
+                prevX = 8
                 prevY = 320
-                prevZ = 0
+                prevZ = 8
                 while True:
                     #general_player_handler.get_online_players()[0]["socket"]
 
@@ -379,7 +389,7 @@ def main():
                     packet = get_encrypted_packet(serverbound, client_socket)
                     if isinstance(packet, SetPlayerPosition) or isinstance(packet, SetPlayerPositionRotation):
                         on_ground = packet.get("on_ground")
-                        print(prevX, prevY, prevZ)
+                        #print(prevX, prevY, prevZ)
                         currentX = struct.unpack('>d', packet.get("x"))[0]
                         currentY = struct.unpack('>d', packet.get("y"))[0]
                         currentZ = struct.unpack('>d', packet.get("z"))[0]
@@ -388,7 +398,7 @@ def main():
                         delta_y = int(currentY * 32 - prevY * 32) * 128
                         delta_z = int(currentZ * 32 - prevZ * 32) * 128
 
-                        print(delta_x, delta_y, delta_z)
+                        #print(delta_x, delta_y, delta_z)
 
                         update_entity_position = UpdateEntityPosition(entity_id, delta_x, delta_y, delta_z, on_ground)
 
@@ -397,6 +407,56 @@ def main():
                         prevX = currentX
                         prevY = currentY
                         prevZ = currentZ
+                    """
+                    elif isinstance(packet, SetPlayerPositionRotation):
+                        on_ground = packet.get("on_ground")
+                        currentX = struct.unpack('>d', packet.get("x"))[0]
+                        currentY = struct.unpack('>d', packet.get("y"))[0]
+                        currentZ = struct.unpack('>d', packet.get("z"))[0]
+                        yaw = packet.get("yaw")
+                        pitch = packet.get("pitch")
+
+                        yaw = struct.unpack('>f', yaw)[0]
+                        pitch = struct.unpack('>f', pitch)[0]
+
+                        yaw = int((yaw / 360.0) * 256.0) #convert
+                        pitch = int((pitch / 360.0) * 256.0) #convert
+
+                        yaw = struct.pack("B", yaw)
+                        pitch = struct.pack("B", pitch)
+
+                        print(yaw, pitch, on_ground)
+
+                        delta_x = int(currentX * 32 - prevX * 32) * 128
+                        delta_y = int(currentY * 32 - prevY * 32) * 128
+                        delta_z = int(currentZ * 32 - prevZ * 32) * 128
+
+                        update_entity_position_rotation = UpdateEntityPositionRotation(entity_id, delta_x, delta_y, delta_z, yaw, pitch, on_ground)
+
+                        networking.broadcast(update_entity_position_rotation)
+
+                        prevX = currentX
+                        prevY = currentY
+                        prevZ = currentZ
+                    
+                    elif isinstance(packet, SetPlayerRotation):
+                        on_ground = packet.get("on_ground")
+                        yaw = packet.get("yaw")
+                        pitch = packet.get("pitch")
+
+                        yaw = struct.unpack('>f', yaw)[0]
+                        pitch = struct.unpack('>f', pitch)[0]
+
+                        yaw = int((yaw / 360.0) * 256.0) #convert
+                        pitch = int((pitch / 360.0) * 256.0) #convert
+
+                        yaw = struct.pack("B", yaw)
+                        pitch = struct.pack("B", pitch)
+
+                        update_entity_rotation = UpdateEntityRotation(entity_id, yaw, pitch)
+
+                        networking.broadcast(update_entity_rotation)
+                    """
 
 
             threading.Thread(target=keepListening).start()
