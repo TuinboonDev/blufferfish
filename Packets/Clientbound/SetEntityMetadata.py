@@ -11,4 +11,4 @@ class SetEntityMetadata:
         self.index = index
         self.type = value_type
         self.value = value
-        self.end_byte = b'\xff' #end byte somehow
+        self.end_byte = b"\xff" #end byte somehow

@@ -10,7 +10,7 @@ def encode_coordinates(x, z, y):
     # Combine the values into a single 64-bit integer
     encoded_value = (x << 38) | (z << 12) | y
 
-    # If the highest bit of each coordinate is set (indicating negative value), convert to two's complement
+    # If the highest bit of each coordinate is set (indicating negative value), convert to two"s complement
     if x & 0x2000000:
         x -= 0x4000000
     if z & 0x2000000:
@@ -22,9 +22,9 @@ def encode_coordinates(x, z, y):
 class SetDefaultSpawnPosition:
     def __init__(self, x, y, z, angle):
         encoded_coordinates = encode_coordinates(x, z, y)
-        location = struct.pack('>Q', encoded_coordinates)
+        location = struct.pack(">Q", encoded_coordinates)
 
-        angle = struct.pack('f', angle)
+        angle = struct.pack("f", angle)
 
         self.location = location
         self.angle = angle

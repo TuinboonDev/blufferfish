@@ -35,7 +35,7 @@ from Packets.Clientbound.LoginSuccess import LoginSuccess
 from Packets.Clientbound.RegistryData import RegistryData
 from Packets.Clientbound.ConfigurationFinish import ConfigurationFinish
 from Packets.Clientbound.LoginPlay import LoginPlay
-from Packets.Clientbound.SynchronizePlayerPosition import SyncronizePlayerPosition
+from Packets.Clientbound.SynchronizePlayerPosition import SynchronizePlayerPosition
 from Packets.Clientbound.SetDefaultSpawnPosition import SetDefaultSpawnPosition
 from Packets.Clientbound.SetCenterChunk import SetCenterChunk
 from Packets.Clientbound.ChunkDataUpdateLight import ChunkDataUpdateLight
@@ -63,7 +63,7 @@ from Handlers.GeneralPlayerHandler import GeneralPlayerHandler
 def main():
     # Define the port to listen on
     PORT = 25565
-    HOST = 'localhost'
+    HOST = "localhost"
 
     # Create a socket object
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -89,8 +89,8 @@ def main():
         packet_id, byte_length = unpack_encrypted_varint(socket)
         packet_length -= byte_length
         return serverbound.receive(packet_length, packet_id)
-    
-    def handle(client_socket, networking):
+
+    def handle(client_socket: socket.socket, networking: Networking):
         clientbound = Clientbound(client_socket)
         serverbound = Serverbound(client_socket)
 
@@ -180,12 +180,12 @@ def main():
 
                     verification_hash = sha1()
 
-                    verification_hash.update(server_id.encode('utf-8'))
+                    verification_hash.update(server_id.encode("utf-8"))
                     verification_hash.update(shared_secret)
                     verification_hash.update(public_key_der)
 
-                    number_representation = int.from_bytes(verification_hash.digest(), byteorder='big', signed=True)
-                    hash = format(number_representation, 'x')
+                    number_representation = int.from_bytes(verification_hash.digest(), byteorder="big", signed=True)
+                    hash = format(number_representation, "x")
 
                     session_auth = requests.get(f"https://sessionserver.mojang.com/session/minecraft/hasJoined?username={name}&serverId={hash}")
                     session_json = session_auth.json()
@@ -209,7 +209,7 @@ def main():
 
                         Packets.PacketUtil.decryptor = decryptor
 
-                        login_success = LoginSuccess(uuid_bytes, name, b'')
+                        login_success = LoginSuccess(uuid_bytes, name, b"")
 
                         clientbound.send_encrypted(login_success, encryptor)
 
@@ -261,7 +261,7 @@ def main():
             login_play = LoginPlay(
                 entity_id,
                 False,
-                b'',
+                b"",
                 5,
                 12,
                 6,
@@ -285,7 +285,7 @@ def main():
 
             print("Login Success")
 
-            set_held_item = SetHeldItem(b'\x00')
+            set_held_item = SetHeldItem(b"\x00")
 
             clientbound.send_encrypted(set_held_item, encryptor)
 
@@ -293,7 +293,7 @@ def main():
 
             teleport_id = 123
 
-            sync_player_pos = SyncronizePlayerPosition(8,320,8, 0, 0, b'\x00', teleport_id)
+            sync_player_pos = SynchronizePlayerPosition(8,320,8, 0, 0, b"\x00", teleport_id)
 
             clientbound.send_encrypted(sync_player_pos, encryptor)
 
@@ -317,7 +317,7 @@ def main():
 
             # Chunk Data and Update Light
 
-            chunk_data_update_light = ChunkDataUpdateLight(0, 0, b'', b'')
+            chunk_data_update_light = ChunkDataUpdateLight(0, 0, b"", b"")
             clientbound.send_encrypted(chunk_data_update_light, encryptor)
 
             # tp confirm
@@ -348,26 +348,26 @@ def main():
 
                 networking.broadcast(add_player)
 
-            #TODO: change this so it doesnt keep sending to every client
+            #TODO: change this so it doesn't keep sending to every client
 
             #--------------------------------------------
 
             other_players = general_player_handler.get_all_other_players(name)
 
             for player in other_players:
-                spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 8, 320, 8, b'\x00', b'\x00', b'\x00', 0, 0, 0, 0)
+                spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 8, 320, 8, b"\x00", b"\x00", b"\x00", 0, 0, 0, 0)
 
                 clientbound.send_encrypted(spawn_entity, encryptor)
 
             #--------------------------------------------
 
-            player_count = general_player_handler.get_player_count()
+            # player_count = general_player_handler.get_player_count()
 
-            if player_count - 1 > 0:
-                for player in all_players:
-                    if player["name"] == name:
-                        spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 8, 320, 8, b'\x00', b'\x00', b'\x00', 0, 0, 0, 0)
-                        networking.send_to_others(spawn_entity, client_socket)
+            # if player_count - 1 > 0:
+            #     for player in all_players:
+            #         if player["name"] == name:
+            #             spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 8, 320, 8, b"\x00", b"\x00", b"\x00", 0, 0, 0, 0)
+            #             networking.send_to_others(spawn_entity, client_socket)
 
 
 
@@ -390,9 +390,9 @@ def main():
                     if isinstance(packet, SetPlayerPosition) or isinstance(packet, SetPlayerPositionRotation):
                         on_ground = packet.get("on_ground")
                         #print(prevX, prevY, prevZ)
-                        currentX = struct.unpack('>d', packet.get("x"))[0]
-                        currentY = struct.unpack('>d', packet.get("y"))[0]
-                        currentZ = struct.unpack('>d', packet.get("z"))[0]
+                        currentX = struct.unpack(">d", packet.get("x"))[0]
+                        currentY = struct.unpack(">d", packet.get("y"))[0]
+                        currentZ = struct.unpack(">d", packet.get("z"))[0]
 
                         delta_x = int(currentX * 32 - prevX * 32) * 128
                         delta_y = int(currentY * 32 - prevY * 32) * 128
@@ -410,14 +410,14 @@ def main():
                     """
                     elif isinstance(packet, SetPlayerPositionRotation):
                         on_ground = packet.get("on_ground")
-                        currentX = struct.unpack('>d', packet.get("x"))[0]
-                        currentY = struct.unpack('>d', packet.get("y"))[0]
-                        currentZ = struct.unpack('>d', packet.get("z"))[0]
+                        currentX = struct.unpack(">d", packet.get("x"))[0]
+                        currentY = struct.unpack(">d", packet.get("y"))[0]
+                        currentZ = struct.unpack(">d", packet.get("z"))[0]
                         yaw = packet.get("yaw")
                         pitch = packet.get("pitch")
 
-                        yaw = struct.unpack('>f', yaw)[0]
-                        pitch = struct.unpack('>f', pitch)[0]
+                        yaw = struct.unpack(">f", yaw)[0]
+                        pitch = struct.unpack(">f", pitch)[0]
 
                         yaw = int((yaw / 360.0) * 256.0) #convert
                         pitch = int((pitch / 360.0) * 256.0) #convert
@@ -444,8 +444,8 @@ def main():
                         yaw = packet.get("yaw")
                         pitch = packet.get("pitch")
 
-                        yaw = struct.unpack('>f', yaw)[0]
-                        pitch = struct.unpack('>f', pitch)[0]
+                        yaw = struct.unpack(">f", yaw)[0]
+                        pitch = struct.unpack(">f", pitch)[0]
 
                         yaw = int((yaw / 360.0) * 256.0) #convert
                         pitch = int((pitch / 360.0) * 256.0) #convert
@@ -461,7 +461,8 @@ def main():
 
             threading.Thread(target=keepListening).start()
 
-            print('crazy?')
+            print("crazy?")
+            print("i was crazy once")
 
 
 
@@ -474,15 +475,13 @@ def main():
     while True:
         client_socket, address = server_socket.accept()
 
-        test = ''
-
         networking.add_client(client_socket)
 
         new_connection = threading.Thread(target=handle, args=(client_socket, networking))
         new_connection.start()
 
         entity_id += 1
-        
+
 
 if __name__ == "__main__":
     main()

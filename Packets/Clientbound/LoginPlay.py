@@ -3,15 +3,15 @@ import struct
 
 def encode_gamemode(gamemode):
     if gamemode == None:
-        return int(-1).to_bytes(1, 'big', signed=True)
+        return int(-1).to_bytes(1, "big", signed=True)
     elif gamemode == "survival":
-        return int(0).to_bytes(1, 'big')
+        return int(0).to_bytes(1, "big")
     elif gamemode == "creative":
-        return int(1).to_bytes(1, 'big')
+        return int(1).to_bytes(1, "big")
     elif gamemode == "adventure":
-        return int(2).to_bytes(1, 'big')
+        return int(2).to_bytes(1, "big")
     elif gamemode == "spectator":
-        return int(3).to_bytes(1, 'big')
+        return int(3).to_bytes(1, "big")
 
 class LoginPlay:
     def __init__(
@@ -38,26 +38,26 @@ class LoginPlay:
             portal_cooldown
     ):
 
-        entity_id = entity_id.to_bytes(4, 'big', signed=True)
-        is_hardcore = int(is_hardcore).to_bytes(1, 'big')
+        entity_id = entity_id.to_bytes(4, "big", signed=True)
+        is_hardcore = int(is_hardcore).to_bytes(1, "big")
         dimensions = pack_data(dimensions)
         max_players = pack_varint(max_players)
         view_distance = pack_varint(view_distance)
         simulation_distance = pack_varint(simulation_distance)
-        reduced_debug_info = int(reduced_debug_info).to_bytes(1, 'big')
-        respawn_screen = int(respawn_screen).to_bytes(1, 'big')
-        limited_crafting = int(limited_crafting).to_bytes(1, 'big')
+        reduced_debug_info = int(reduced_debug_info).to_bytes(1, "big")
+        respawn_screen = int(respawn_screen).to_bytes(1, "big")
+        limited_crafting = int(limited_crafting).to_bytes(1, "big")
         dimension_type = write_string(dimension_type)
         dimension_name = write_string(dimension_name)
-        seed = struct.pack('>q', seed)
+        seed = struct.pack(">q", seed)
         gamemode = encode_gamemode(gamemode)
         previous_gamemode = encode_gamemode(previous_gamemode)
-        is_debug = int(is_debug).to_bytes(1, 'big')
-        is_flat = int(is_flat).to_bytes(1, 'big')
+        is_debug = int(is_debug).to_bytes(1, "big")
+        is_flat = int(is_flat).to_bytes(1, "big")
 
         do_death_location = has_death_location
 
-        has_death_location = int(has_death_location).to_bytes(1, 'big')
+        has_death_location = int(has_death_location).to_bytes(1, "big")
         if do_death_location:
             death_dimension = write_string(death_dimension)
             death_location = pack_data(death_location)

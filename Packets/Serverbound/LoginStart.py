@@ -5,9 +5,9 @@ class LoginStart:
         name_length, byte_length = unpack_varint(socket)
         name = ""
         for i in range(name_length):
-            name += socket.recv(1).decode('utf-8')
+            name += socket.recv(1).decode("utf-8")
         uuid_bytes = socket.recv(16)
-        #uuid = ''.join('{:02x}'.format(x) for x in uuid_bytes)
+        #uuid = "".join("{:02x}".format(x) for x in uuid_bytes)
 
         self.name_length = name_length
         self.name = name

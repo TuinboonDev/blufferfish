@@ -1,9 +1,11 @@
+import socket
+
 from Packets.PacketMap import GameStates, get_gamestate
 from Packets.PacketUtil import pack_varint
 from Packets.PacketMap import GameStates
 
 class Clientbound:
-    def __init__(self, socket):
+    def __init__(self, socket: socket.socket):
         self.socket = socket
 
     def __send(self, packet, encryption):
@@ -20,7 +22,7 @@ class Clientbound:
         for key in list(packet.__dict__.keys()):
             final_packet += packet.__dict__[key]
 
-        if packet_class.__name__ == "SyncronizePlayerPosition" or packet_class.__name__ == "SetDefaultSpawnPosition":
+        if packet_class.__name__ == "SynchronizePlayerPosition" or packet_class.__name__ == "SetDefaultSpawnPosition":
             #print(len(final_packet))
             #for x in final_packet:
             #    print(x)

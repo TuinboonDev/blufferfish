@@ -22,7 +22,7 @@ class ServerData:
         with open(icon, "rb") as f:
             encoded = base64.b64encode(f.read())
 
-        self.data["favicon"] = f"data:image/png;base64,{encoded.decode('utf-8')}"
+        self.data["favicon"] = f"data:image/png;base64,{encoded.decode("utf-8")}"
 
         self.data["enforcesSecureChat"] = secureChat
 

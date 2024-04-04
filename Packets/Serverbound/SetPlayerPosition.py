@@ -1,7 +1,9 @@
+import socket
+
 from Packets.PacketUtil import decrypt_byte
 
 class SetPlayerPosition:
-    def create(self, remaining_packet_length, socket):
+    def create(self, remaining_packet_length, socket: socket.socket):
         x = decrypt_byte(socket.recv(8))
         y = decrypt_byte(socket.recv(8))
         z = decrypt_byte(socket.recv(8))

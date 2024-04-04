@@ -24,7 +24,7 @@ from Packets.Clientbound.EncryptionRequest import EncryptionRequest
 from Packets.Clientbound.RegistryData import RegistryData
 from Packets.Clientbound.ConfigurationFinish import ConfigurationFinish
 from Packets.Clientbound.LoginPlay import LoginPlay
-from Packets.Clientbound.SynchronizePlayerPosition import SyncronizePlayerPosition
+from Packets.Clientbound.SynchronizePlayerPosition import SynchronizePlayerPosition
 from Packets.Clientbound.SetDefaultSpawnPosition import SetDefaultSpawnPosition
 from Packets.Clientbound.SetCenterChunk import SetCenterChunk
 from Packets.Clientbound.ChunkDataUpdateLight import ChunkDataUpdateLight
@@ -117,7 +117,7 @@ GameStates = {
             0x55: DisplayObjective,
             0x30: OpenBook,
             0x29: LoginPlay,
-            0x3E: SyncronizePlayerPosition,
+            0x3E: SynchronizePlayerPosition,
             0x54: SetDefaultSpawnPosition,
             0x52: SetCenterChunk,
             0x25: ChunkDataUpdateLight,

@@ -8,8 +8,8 @@ class Handshake:
         server_address = ""
         for i in range(server_address_length):
             server_address += socket.recv(1).decode("utf-8")
-        server_port = struct.unpack('>H', socket.recv(2))[0]
-        next_state = int.from_bytes(socket.recv(1), byteorder='big')
+        server_port = struct.unpack(">H", socket.recv(2))[0]
+        next_state = int.from_bytes(socket.recv(1), byteorder="big")
 
         self.protocol_version = protocol_version
         self.server_address_length = server_address_length

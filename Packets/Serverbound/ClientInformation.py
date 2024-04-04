@@ -3,9 +3,9 @@ from Packets.PacketUtil import decrypt_byte, unpack_encrypted_varint
 class ClientInformation:
     def create(self, remaining_packet_length, socket):
         locale_length, byte_length = unpack_encrypted_varint(socket)
-        locale = ''
+        locale = ""
         for i in range(locale_length):
-            locale += decrypt_byte(socket.recv(1)).decode('utf-8')
+            locale += decrypt_byte(socket.recv(1)).decode("utf-8")
         view_distance = decrypt_byte(socket.recv(1))
         chat_mode, byte_length = unpack_encrypted_varint(socket)
         chat_colors = decrypt_byte(socket.recv(1))
