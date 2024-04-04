@@ -1,6 +1,6 @@
 class PingRequest:
-    def create(self, remaining_packet_length, socket):
-        time = socket.recv(8)
+    def create(self, bytebuf, decryptor):
+        time = bytebuf.recv(8)
 
         self.time = time
 

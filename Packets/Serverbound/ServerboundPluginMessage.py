@@ -1,16 +1,14 @@
-from Packets.PacketUtil import unpack_encrypted_varint, decrypt_byte
-
 class ServerboundPluginMessage:
-    def create(self, remaining_packet_length, socket):
-        identifier_length, byte_length = unpack_encrypted_varint(socket)
+    def create(self, bytebuf, decryptor):
+        identifier_length, byte_length = bytebuf.unpack_encrypted_varint(decryptor)
         identifier = ""
         for i in range(identifier_length):
-            identifier += decrypt_byte(socket.recv(1)).decode("utf-8")
+            identifier += bytebuf.decrypt_byte(bytebuf.recv(1), decryptor).decode('utf-8')
 
-        data_length = remaining_packet_length - byte_length - identifier_length
-        data = b""
+        data_length = len(bytebuf)
+        data = b''
         for i in range(data_length):
-            data += decrypt_byte(socket.recv(1)) #bit array
+            data += bytebuf.decrypt_byte(bytebuf.recv(1), decryptor) #bit array
 
         self.identifier = identifier
         self.data = data

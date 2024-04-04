@@ -1,17 +1,13 @@
-from Packets.PacketUtil import decrypt_byte
-
 class SetPlayerPositionRotation:
-    def create(self, remaining_packet_length, socket):
-        x = decrypt_byte(socket.recv(8))
-        y = decrypt_byte(socket.recv(8))
-        z = decrypt_byte(socket.recv(8))
+    def create(self, bytebuf, decryptor):
+        x = bytebuf.decrypt_byte(bytebuf.recv(8), decryptor)
+        y = bytebuf.decrypt_byte(bytebuf.recv(8), decryptor)
+        z = bytebuf.decrypt_byte(bytebuf.recv(8), decryptor)
 
-        yaw = decrypt_byte(socket.recv(4))
-        pitch = decrypt_byte(socket.recv(4))
+        yaw = bytebuf.decrypt_byte(bytebuf.recv(4), decryptor)
+        pitch = bytebuf.decrypt_byte(bytebuf.recv(4), decryptor)
 
-        on_ground = decrypt_byte(socket.recv(1))
-
-        #print(bytes("SetPlayerPositionRotation".encode("utf-8")), decrypt_byte(socket.recv(1024)))
+        on_ground = bytebuf.decrypt_byte(bytebuf.recv(1), decryptor)
 
         self.x = x
         self.y = y

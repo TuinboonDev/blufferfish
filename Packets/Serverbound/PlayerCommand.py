@@ -1,10 +1,8 @@
-from Packets.PacketUtil import decrypt_byte, unpack_encrypted_varint
-
 class PlayerCommand:
-    def create(self, remaining_packet_length, socket):
-        entity_id = unpack_encrypted_varint(socket)
-        action_id = unpack_encrypted_varint(socket)
-        jump_boost = unpack_encrypted_varint(socket)
+    def create(self, bytebuf, decryptor):
+        entity_id = bytebuf.unpack_encrypted_varint(decryptor)[0]
+        action_id = bytebuf.unpack_encrypted_varint(decryptor)[0]
+        jump_boost = bytebuf.unpack_encrypted_varint(decryptor)[0]
 
         self.entity_id = entity_id
         self.action_id = action_id

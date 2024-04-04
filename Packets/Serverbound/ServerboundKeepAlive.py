@@ -1,8 +1,6 @@
-from Packets.PacketUtil import decrypt_byte
-
 class ServerboundKeepAlive:
-    def create(self, remaining_packet_length, socket):
-        keep_alive_id = decrypt_byte(socket.recv(8))
+    def create(self, bytebuf, decryptor):
+        keep_alive_id = bytebuf.decrypt_byte(bytebuf.recv(8), decryptor)
 
         self.keep_alive_id = keep_alive_id
         return self

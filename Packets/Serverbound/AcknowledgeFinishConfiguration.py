@@ -1,5 +1,5 @@
 class AcknowledgeFinishConfiguration:
-    def create(self, remaining_packet_length, socket):
+    def create(self, bytebuf, decryptor):
         return self
 
     def get(self, item):

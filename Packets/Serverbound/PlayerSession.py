@@ -1,16 +1,13 @@
-from Packets.PacketUtil import decrypt_byte, unpack_encrypted_varint
-
 class PlayerSession:
     #TODO: Please fix
-    def create(self, remaining_packet_length, socket):
-        session_id = decrypt_byte(socket.recv(16))
-        expires_at = decrypt_byte(socket.recv(8))
-        public_key_length = unpack_encrypted_varint(socket)[0]
-        public_key = socket.recv(public_key_length)
-        key_signature_length = unpack_encrypted_varint(socket)[0]
-        key_signature = socket.recv(key_signature_length)
+    def create(self, bytebuf, decryptor):
+        session_id = bytebuf.decrypt_byte(bytebuf.recv(16), decryptor)
+        expires_at = bytebuf.decrypt_byte(bytebuf.recv(8), decryptor)
+        public_key_length = bytebuf.unpack_encrypted_varint(decryptor)[0]
+        public_key = bytebuf.decrypt_byte(bytebuf.recv(public_key_length), decryptor)
+        key_signature_length = bytebuf.unpack_encrypted_varint(decryptor)[0]
+        key_signature = bytebuf.decrypt_byte(bytebuf.recv(key_signature_length), decryptor)
 
-        print(bytes("PlayerSession".encode("utf-8")), decrypt_byte(socket.recv(1024)))
         self.session_id = session_id
         self.expires_at = expires_at
         self.public_key = public_key

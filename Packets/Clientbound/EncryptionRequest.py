@@ -1,5 +1,4 @@
-from Packets.PacketUtil import pack_varint, write_string, pack_data
-from Encryption import Encryption
+from Packets.PacketUtil import write_string, pack_data
 
 class EncryptionRequest:
     def __init__(self, server_id, public_key, verify_token):

@@ -1,3 +1,5 @@
+import sys
+sys.dont_write_bytecode = True
 import socket
 import struct
 import json
@@ -6,8 +8,6 @@ import time
 import threading
 import uuid
 import requests
-import sys
-sys.dont_write_bytecode = True
 
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from hashlib import sha1
@@ -27,6 +27,7 @@ from Packets.Serverbound.ClientInformation import ClientInformation
 from Packets.Serverbound.SetPlayerPosition import SetPlayerPosition
 from Packets.Serverbound.SetPlayerPositionRotation import SetPlayerPositionRotation
 from Packets.Serverbound.SetPlayerRotation import SetPlayerRotation
+from Packets.Serverbound.PlayerSession import PlayerSession
 
 from Packets.Clientbound.PingResponse import PingResponse
 from Packets.Clientbound.StatusResponse import StatusResponse
@@ -35,7 +36,7 @@ from Packets.Clientbound.LoginSuccess import LoginSuccess
 from Packets.Clientbound.RegistryData import RegistryData
 from Packets.Clientbound.ConfigurationFinish import ConfigurationFinish
 from Packets.Clientbound.LoginPlay import LoginPlay
-from Packets.Clientbound.SynchronizePlayerPosition import SynchronizePlayerPosition
+from Packets.Clientbound.SynchronizePlayerPosition import SyncronizePlayerPosition
 from Packets.Clientbound.SetDefaultSpawnPosition import SetDefaultSpawnPosition
 from Packets.Clientbound.SetCenterChunk import SetCenterChunk
 from Packets.Clientbound.ChunkDataUpdateLight import ChunkDataUpdateLight
@@ -52,9 +53,9 @@ from Packets.Clientbound.UpdateEntityPositionRotation import UpdateEntityPositio
 from Packets.Clientbound.UpdateEntityRotation import UpdateEntityRotation
 
 from Packets.PacketHandler import Clientbound, Serverbound
-from Packets.PacketUtil import unpack_varint, unpack_encrypted_varint, pack_varint, unpack_varint_bytes, decrypt_byte
 from Packets.ServerData import ServerData
-from Packets.PacketMap import set_gamestate, get_gamestate
+from Packets.PacketMap import GameState
+from Packets.PacketUtil import ByteBuffer, unpack_varint, unpack_encrypted_varint
 
 from Encryption import Encryption
 from Networking import Networking
@@ -63,7 +64,7 @@ from Handlers.GeneralPlayerHandler import GeneralPlayerHandler
 def main():
     # Define the port to listen on
     PORT = 25565
-    HOST = "localhost"
+    HOST = 'localhost'
 
     # Create a socket object
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -76,39 +77,41 @@ def main():
 
     print("Listening on port", PORT)
 
-    def get_packet(serverbound, socket):
+    def get_packet(serverbound, socket, gamestate):
         packet_length, byte_length = unpack_varint(socket)
 
-        packet_id, byte_length = unpack_varint(socket)
-        packet_length -= byte_length
-        return serverbound.receive(packet_length, packet_id)
+        buf = ByteBuffer(socket.recv(packet_length))
 
-    def get_encrypted_packet(serverbound, socket):
-        packet_length, byte_length = unpack_encrypted_varint(socket)
+        packet_id, byte_length = buf.unpack_varint()
+        return serverbound.receive(buf, packet_id, gamestate, None)
 
-        packet_id, byte_length = unpack_encrypted_varint(socket)
-        packet_length -= byte_length
-        return serverbound.receive(packet_length, packet_id)
+    def get_encrypted_packet(serverbound, socket, gamestate, decryptor):
+        packet_length, byte_length = unpack_encrypted_varint(socket, decryptor)
 
-    def handle(client_socket: socket.socket, networking: Networking):
+        buf = ByteBuffer(socket.recv(packet_length))
+
+        packet_id, byte_length = buf.unpack_encrypted_varint(decryptor)
+        return serverbound.receive(buf, packet_id, gamestate, decryptor)
+    
+    def handle(client_socket, networking):
         clientbound = Clientbound(client_socket)
-        serverbound = Serverbound(client_socket)
+        serverbound = Serverbound()
 
-        set_gamestate("HANDSHAKE")
+        gamestate = GameState()
 
         print("Connection from", address)
 
-        if get_gamestate() == "HANDSHAKE":
-            packet = get_packet(serverbound, client_socket)
+        if gamestate.get_gamestate() == "HANDSHAKE":
+            packet = get_packet(serverbound, client_socket, gamestate)
 
             if isinstance(packet, Handshake):
                 if packet.get("next_state") == 1:
-                    set_gamestate("STATUS")
+                    gamestate.set_gamestate("STATUS")
                 elif packet.get("next_state") == 2:
-                    set_gamestate("LOGIN")
+                    gamestate.set_gamestate("LOGIN")
 
-        if get_gamestate() == "STATUS":
-            packet = get_packet(serverbound, client_socket)
+        if gamestate.get_gamestate() == "STATUS":
+            packet = get_packet(serverbound, client_socket, gamestate)
 
             if isinstance(packet, StatusRequest):
                 sample = [
@@ -130,18 +133,18 @@ def main():
 
                 SLP_packet = StatusResponse(server_data.get_data())
 
-                clientbound.send(SLP_packet)
+                clientbound.send(SLP_packet, gamestate)
 
 
-            packet = get_packet(serverbound, client_socket)
+            packet = get_packet(serverbound, client_socket, gamestate)
 
             if isinstance(packet, PingRequest):
                 ping_response = PingResponse(packet.get("time"))
-                clientbound.send(ping_response)
+                clientbound.send(ping_response, gamestate)
                 print("Sent ping packet")
 
-        if get_gamestate() == "LOGIN":
-            packet = get_packet(serverbound, client_socket)
+        if gamestate.get_gamestate() == "LOGIN":
+            packet = get_packet(serverbound, client_socket, gamestate)
 
             if isinstance(packet, LoginStart):
                 name = packet.get("name")
@@ -164,13 +167,13 @@ def main():
 
                 encryption_request = EncryptionRequest(server_id, public_key_der, verify_token)
 
-                clientbound.send(encryption_request)
+                clientbound.send(encryption_request, gamestate)
 
 
                 print("Sent encryption request")
 
 
-                packet = get_packet(serverbound, client_socket)
+                packet = get_packet(serverbound, client_socket, gamestate)
 
                 if isinstance(packet, EncryptionResponse):
                     shared_secret = packet.get("shared_secret")
@@ -180,19 +183,16 @@ def main():
 
                     verification_hash = sha1()
 
-                    verification_hash.update(server_id.encode("utf-8"))
+                    verification_hash.update(server_id.encode('utf-8'))
                     verification_hash.update(shared_secret)
                     verification_hash.update(public_key_der)
 
-                    number_representation = int.from_bytes(verification_hash.digest(), byteorder="big", signed=True)
-                    hash = format(number_representation, "x")
+                    number_representation = int.from_bytes(verification_hash.digest(), byteorder='big', signed=True)
+                    hash = format(number_representation, 'x')
 
                     session_auth = requests.get(f"https://sessionserver.mojang.com/session/minecraft/hasJoined?username={name}&serverId={hash}")
                     session_json = session_auth.json()
-                    print(session_json)
                     #TODO: Use retrieved data to verify the player
-
-                    print(hash)
 
                     if private_key.decrypt(verif_token, PKCS1v15()) == verify_token:
                         print("Verification successful")
@@ -200,68 +200,64 @@ def main():
                         encryption.create_cipher(shared_secret)
                         cipher = encryption.get_cipher()
 
-                        #global encryptor
+                        #global gamestate, encryptor
 
                         encryptor = cipher.encryptor()
                         decryptor = cipher.decryptor()
 
                         networking.add_encryptor(client_socket, encryptor)
 
-                        Packets.PacketUtil.decryptor = decryptor
+                        login_success = LoginSuccess(uuid_bytes, name, b'')
 
-                        login_success = LoginSuccess(uuid_bytes, name, b"")
-
-                        clientbound.send_encrypted(login_success, encryptor)
+                        clientbound.send_encrypted(login_success, gamestate, encryptor)
 
                 print("Sent login success")
 
                 #LOGIN ACKNOWLEDGEMENT
-                packet = get_encrypted_packet(serverbound, client_socket)
+                packet = get_encrypted_packet(serverbound, client_socket, gamestate, decryptor)
                 if isinstance(packet, LoginAcknowledged):
-                    set_gamestate("CONFIGURATION")
+                    gamestate.set_gamestate("CONFIGURATION")
                     print("Login Acknowledged")
 
-        if get_gamestate() == "CONFIGURATION":
-            packet = get_encrypted_packet(serverbound, client_socket)
+        if gamestate.get_gamestate() == "CONFIGURATION":
+            packet = get_encrypted_packet(serverbound, client_socket, gamestate, decryptor)
 
             if isinstance(packet, ServerboundPluginMessage):
-                #print(packet.get("identifier"))
-                #print(packet.get("data"))
                 print("Plugin Message")
 
-            packet = get_encrypted_packet(serverbound, client_socket)
+            packet = get_encrypted_packet(serverbound, client_socket, gamestate, decryptor)
 
             if isinstance(packet, ClientInformation):
                 skin_parts = packet.get("displayed_skin_parts")
-                general_player_handler.add_player(name, uuid_bytes, session_json["properties"], skin_parts, client_socket)
                 print("Client info")
 
             # Registry Data
 
             registry_data = RegistryData()
 
-            clientbound.send_encrypted(registry_data, encryptor)
+            clientbound.send_encrypted(registry_data, gamestate, encryptor)
 
             # configuration finish
 
             configfinish = ConfigurationFinish()
 
-            clientbound.send_encrypted(configfinish, encryptor)
+            clientbound.send_encrypted(configfinish, gamestate, encryptor)
 
-            packet = get_encrypted_packet(serverbound, client_socket)
+            packet = get_encrypted_packet(serverbound, client_socket, gamestate, decryptor)
 
             if isinstance(packet, AcknowledgeFinishConfiguration):
-                set_gamestate("PLAY")
+                gamestate.set_gamestate("PLAY")
                 print("Configuration Finished")
 
-        if get_gamestate() == "PLAY":
+        if gamestate.get_gamestate() == "PLAY":
+            general_player_handler.add_player(name, uuid_bytes, session_json["properties"], skin_parts, client_socket)
             entity_id = general_player_handler.get_entity_id(uuid_bytes)
 
 
             login_play = LoginPlay(
                 entity_id,
                 False,
-                b"",
+                b'',
                 5,
                 12,
                 6,
@@ -281,47 +277,47 @@ def main():
                 0
             )
 
-            clientbound.send_encrypted(login_play, encryptor)
+            clientbound.send_encrypted(login_play, gamestate, encryptor)
 
             print("Login Success")
 
-            set_held_item = SetHeldItem(b"\x00")
+            set_held_item = SetHeldItem(b'\x00')
 
-            clientbound.send_encrypted(set_held_item, encryptor)
+            clientbound.send_encrypted(set_held_item, gamestate, encryptor)
 
             # ----
 
             teleport_id = 123
 
-            sync_player_pos = SynchronizePlayerPosition(8,320,8, 0, 0, b"\x00", teleport_id)
+            sync_player_pos = SyncronizePlayerPosition(8,320,8, 0, 0, b'\x00', teleport_id)
 
-            clientbound.send_encrypted(sync_player_pos, encryptor)
+            clientbound.send_encrypted(sync_player_pos, gamestate, encryptor)
 
             # Set default spawn pos
 
             set_default_spawn_pos = SetDefaultSpawnPosition(8, 320, 8, 0)
 
-            clientbound.send_encrypted(set_default_spawn_pos, encryptor)
+            clientbound.send_encrypted(set_default_spawn_pos, gamestate, encryptor)
 
             # Game event packet
 
             game_event = GameEvent(13, 0)
 
-            clientbound.send_encrypted(game_event, encryptor)
+            clientbound.send_encrypted(game_event, gamestate, encryptor)
 
             # Center chunk
 
             set_center_chunk = SetCenterChunk(0, 0)
 
-            clientbound.send_encrypted(set_center_chunk, encryptor)
+            clientbound.send_encrypted(set_center_chunk, gamestate, encryptor)
 
             # Chunk Data and Update Light
 
-            chunk_data_update_light = ChunkDataUpdateLight(0, 0, b"", b"")
-            clientbound.send_encrypted(chunk_data_update_light, encryptor)
+            chunk_data_update_light = ChunkDataUpdateLight(0, 0, b'', b'')
+            clientbound.send_encrypted(chunk_data_update_light, gamestate, encryptor)
 
             # tp confirm
-            packet = get_encrypted_packet(serverbound, client_socket)
+            packet = get_encrypted_packet(serverbound, client_socket, gamestate, decryptor)
 
             if isinstance(packet, ConfirmTeleportation):
                 if packet.get("teleport_id") == teleport_id:
@@ -331,7 +327,7 @@ def main():
                 while True:
                     keep_alive = KeepAlive(123)
 
-                    clientbound.send_encrypted(keep_alive, encryptor)
+                    clientbound.send_encrypted(keep_alive, gamestate, encryptor)
                     time.sleep(29)
 
             threading.Thread(target=keepAlive).start()
@@ -346,28 +342,28 @@ def main():
                                                "signature": player["properties"][0]["signature"]})
 
 
-                networking.broadcast(add_player)
+                networking.broadcast(add_player, gamestate)
 
-            #TODO: change this so it doesn't keep sending to every client
+            #TODO: change this so it doesnt keep sending to every client
 
             #--------------------------------------------
 
             other_players = general_player_handler.get_all_other_players(name)
 
             for player in other_players:
-                spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 8, 320, 8, b"\x00", b"\x00", b"\x00", 0, 0, 0, 0)
+                spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 8, 320, 8, b'\x00', b'\x00', b'\x00', 0, 0, 0, 0)
 
-                clientbound.send_encrypted(spawn_entity, encryptor)
+                clientbound.send_encrypted(spawn_entity, gamestate, encryptor)
 
             #--------------------------------------------
 
-            # player_count = general_player_handler.get_player_count()
+            player_count = general_player_handler.get_player_count()
 
-            # if player_count - 1 > 0:
-            #     for player in all_players:
-            #         if player["name"] == name:
-            #             spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 8, 320, 8, b"\x00", b"\x00", b"\x00", 0, 0, 0, 0)
-            #             networking.send_to_others(spawn_entity, client_socket)
+            if player_count - 1 > 0:
+                for player in all_players:
+                    if player["name"] == name:
+                        spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 8, 320, 8, b'\x00', b'\x00', b'\x00', 0, 0, 0, 0)
+                        networking.send_to_others(spawn_entity, client_socket, gamestate)
 
 
 
@@ -375,7 +371,7 @@ def main():
             for player in all_players:
                 set_entity_metadata = SetEntityMetadata(player["entity_id"], 17, 0, player["skin_parts"])
 
-                networking.broadcast(set_entity_metadata)
+                networking.broadcast(set_entity_metadata, gamestate)
 
             def keepListening():
                 prevX = 8
@@ -384,40 +380,38 @@ def main():
                 while True:
                     #general_player_handler.get_online_players()[0]["socket"]
 
+                    packet = get_encrypted_packet(serverbound, client_socket, gamestate, decryptor)
+                    if isinstance(packet, PlayerSession):
+                        print("Player Session")
 
-
-                    packet = get_encrypted_packet(serverbound, client_socket)
-                    if isinstance(packet, SetPlayerPosition) or isinstance(packet, SetPlayerPositionRotation):
+                    elif isinstance(packet, SetPlayerPosition):
                         on_ground = packet.get("on_ground")
-                        #print(prevX, prevY, prevZ)
-                        currentX = struct.unpack(">d", packet.get("x"))[0]
-                        currentY = struct.unpack(">d", packet.get("y"))[0]
-                        currentZ = struct.unpack(">d", packet.get("z"))[0]
+                        currentX = struct.unpack('>d', packet.get("x"))[0]
+                        currentY = struct.unpack('>d', packet.get("y"))[0]
+                        currentZ = struct.unpack('>d', packet.get("z"))[0]
 
                         delta_x = int(currentX * 32 - prevX * 32) * 128
                         delta_y = int(currentY * 32 - prevY * 32) * 128
                         delta_z = int(currentZ * 32 - prevZ * 32) * 128
 
-                        #print(delta_x, delta_y, delta_z)
-
                         update_entity_position = UpdateEntityPosition(entity_id, delta_x, delta_y, delta_z, on_ground)
 
-                        networking.broadcast(update_entity_position)
+                        networking.broadcast(update_entity_position, gamestate)
 
                         prevX = currentX
                         prevY = currentY
                         prevZ = currentZ
-                    """
+
                     elif isinstance(packet, SetPlayerPositionRotation):
                         on_ground = packet.get("on_ground")
-                        currentX = struct.unpack(">d", packet.get("x"))[0]
-                        currentY = struct.unpack(">d", packet.get("y"))[0]
-                        currentZ = struct.unpack(">d", packet.get("z"))[0]
+                        currentX = struct.unpack('>d', packet.get("x"))[0]
+                        currentY = struct.unpack('>d', packet.get("y"))[0]
+                        currentZ = struct.unpack('>d', packet.get("z"))[0]
                         yaw = packet.get("yaw")
                         pitch = packet.get("pitch")
 
-                        yaw = struct.unpack(">f", yaw)[0]
-                        pitch = struct.unpack(">f", pitch)[0]
+                        yaw = struct.unpack('>f', yaw)[0]
+                        pitch = struct.unpack('>f', pitch)[0]
 
                         yaw = int((yaw / 360.0) * 256.0) #convert
                         pitch = int((pitch / 360.0) * 256.0) #convert
@@ -433,19 +427,20 @@ def main():
 
                         update_entity_position_rotation = UpdateEntityPositionRotation(entity_id, delta_x, delta_y, delta_z, yaw, pitch, on_ground)
 
-                        networking.broadcast(update_entity_position_rotation)
+                        networking.broadcast(update_entity_position_rotation, gamestate)
 
                         prevX = currentX
                         prevY = currentY
                         prevZ = currentZ
-                    
+
+                    """
                     elif isinstance(packet, SetPlayerRotation):
                         on_ground = packet.get("on_ground")
                         yaw = packet.get("yaw")
                         pitch = packet.get("pitch")
 
-                        yaw = struct.unpack(">f", yaw)[0]
-                        pitch = struct.unpack(">f", pitch)[0]
+                        yaw = struct.unpack('>f', yaw)[0]
+                        pitch = struct.unpack('>f', pitch)[0]
 
                         yaw = int((yaw / 360.0) * 256.0) #convert
                         pitch = int((pitch / 360.0) * 256.0) #convert
@@ -455,14 +450,13 @@ def main():
 
                         update_entity_rotation = UpdateEntityRotation(entity_id, yaw, pitch)
 
-                        networking.broadcast(update_entity_rotation)
+                        networking.broadcast(update_entity_rotation, gamestate)
                     """
 
 
             threading.Thread(target=keepListening).start()
 
-            print("crazy?")
-            print("i was crazy once")
+            print('crazy?')
 
 
 
@@ -475,13 +469,15 @@ def main():
     while True:
         client_socket, address = server_socket.accept()
 
+        test = ''
+
         networking.add_client(client_socket)
 
         new_connection = threading.Thread(target=handle, args=(client_socket, networking))
         new_connection.start()
 
         entity_id += 1
-
+        
 
 if __name__ == "__main__":
     main()

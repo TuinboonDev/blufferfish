@@ -1,5 +1,5 @@
 import json
-from Packets.PacketUtil import pack_varint, pack_data
+from Packets.PacketUtil import pack_data
 
 class StatusResponse:
     def __init__(self, server_data):

@@ -5,14 +5,14 @@ class Networking:
         self.connected_clients = 0
         self.clients = {}
 
-    def broadcast(self, packet):
+    def broadcast(self, packet, gamestate):
         for client in self.clients:
-            Clientbound(client).send_encrypted(packet, self.get_encryptor(client))
+            Clientbound(client).send_encrypted(packet, gamestate, self.get_encryptor(client))
 
-    def send_to_others(self, packet, sender):
+    def send_to_others(self, packet, sender, gamestate):
         for client in self.clients:
             if client != sender:
-                Clientbound(client).send_encrypted(packet, self.get_encryptor(client))
+                Clientbound(client).send_encrypted(packet, gamestate, self.get_encryptor(client))
 
     def add_encryptor(self, socket, encryptor):
         self.clients[socket] = encryptor

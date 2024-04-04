@@ -1,13 +1,11 @@
-from Packets.PacketUtil import unpack_varint
-
 class LoginStart:
-    def create(self, remaining_packet_length, socket):
-        name_length, byte_length = unpack_varint(socket)
+    def create(self, bytebuf, decryptor):
+        name_length, byte_length = bytebuf.unpack_varint()
         name = ""
         for i in range(name_length):
-            name += socket.recv(1).decode("utf-8")
-        uuid_bytes = socket.recv(16)
-        #uuid = "".join("{:02x}".format(x) for x in uuid_bytes)
+            name += bytebuf.recv(1).decode('utf-8')
+        uuid_bytes = bytebuf.recv(16)
+        #uuid = ''.join('{:02x}'.format(x) for x in uuid_bytes)
 
         self.name_length = name_length
         self.name = name

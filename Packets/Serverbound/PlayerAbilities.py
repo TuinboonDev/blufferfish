@@ -1,8 +1,6 @@
-from Packets.PacketUtil import unpack_encrypted_varint
-
 class PlayerAbilities:
-    def create(self, remaining_packet_length, socket):
-        flags = unpack_encrypted_varint(socket)
+    def create(self, bytebuf, decryptor):
+        flags = bytebuf.unpack_encrypted_varint()[0]
 
         self.flags = flags
         return self

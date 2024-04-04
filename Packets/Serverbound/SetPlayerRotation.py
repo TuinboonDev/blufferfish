@@ -1,13 +1,9 @@
-from Packets.PacketUtil import decrypt_byte
-
 class SetPlayerRotation:
-    def create(self, remaining_packet_length, socket):
-        yaw = decrypt_byte(socket.recv(4))
-        pitch = decrypt_byte(socket.recv(4))
+    def create(self, bytebuf, decryptor):
+        yaw = bytebuf.decrypt_byte(bytebuf.recv(4), decryptor)
+        pitch = bytebuf.decrypt_byte(bytebuf.recv(4), decryptor)
 
-        on_ground = decrypt_byte(socket.recv(1))
-
-        #print(bytes("SetPlayerRotation".encode("utf-8")), decrypt_byte(socket.recv(1024)))
+        on_ground = bytebuf.decrypt_byte(bytebuf.recv(1), decryptor)
 
         self.yaw = yaw
         self.pitch = pitch

@@ -7,15 +7,15 @@ class SpawnEntity:
 
         entity_type = pack_varint(entity_type)
 
-        x = struct.pack(">d", x)
-        y = struct.pack(">d", y)
-        z = struct.pack(">d", z)
+        x = struct.pack('>d', x)
+        y = struct.pack('>d', y)
+        z = struct.pack('>d', z)
 
         data = pack_varint(data)
 
-        velocity_x = struct.pack("h", velocity_x)
-        velocity_y = struct.pack("h", velocity_y)
-        velocity_z = struct.pack("h", velocity_z)
+        velocity_x = struct.pack('h', velocity_x)
+        velocity_y = struct.pack('h', velocity_y)
+        velocity_z = struct.pack('h', velocity_z)
 
         self.entity_id = entity_id
         self.entity_uuid = entity_uuid

@@ -1,8 +1,6 @@
-from Packets.PacketUtil import decrypt_byte
-
 class SetPlayerOnGround:
-    def create(self, remaining_packet_length, socket):
-        on_ground = decrypt_byte(socket.recv(1))
+    def create(self, bytebuf, decryptor):
+        on_ground = bytebuf.decrypt_byte(bytebuf.recv(1), decryptor)
 
         #TODO:
 

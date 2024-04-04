@@ -1,8 +1,6 @@
-from Packets.PacketUtil import unpack_encrypted_varint
-
 class SwingArm:
-    def create(self, remaining_packet_length, socket):
-        hand = unpack_encrypted_varint(socket)
+    def create(self, bytebuf, decryptor):
+        hand = bytebuf.unpack_encrypted_varint(decryptor)[0]
 
         self.hand = hand
         return self

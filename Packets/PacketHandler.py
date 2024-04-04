@@ -1,15 +1,12 @@
-import socket
-
-from Packets.PacketMap import GameStates, get_gamestate
 from Packets.PacketUtil import pack_varint
 from Packets.PacketMap import GameStates
 
 class Clientbound:
-    def __init__(self, socket: socket.socket):
+    def __init__(self, socket):
         self.socket = socket
 
-    def __send(self, packet, encryption):
-        packet_id_map = {v: k for k, v in GameStates[get_gamestate()]["S2C"].items()}
+    def __send(self, packet, gamestate, encryption):
+        packet_id_map = {v: k for k, v in GameStates[gamestate.get_gamestate()]["S2C"].items()}
 
         packet_class = type(packet)
 
@@ -22,7 +19,7 @@ class Clientbound:
         for key in list(packet.__dict__.keys()):
             final_packet += packet.__dict__[key]
 
-        if packet_class.__name__ == "SynchronizePlayerPosition" or packet_class.__name__ == "SetDefaultSpawnPosition":
+        if packet_class.__name__ == "SyncronizePlayerPosition" or packet_class.__name__ == "SetDefaultSpawnPosition":
             #print(len(final_packet))
             #for x in final_packet:
             #    print(x)
@@ -39,21 +36,23 @@ class Clientbound:
             print(f"Error sending packet: {e}")
             return False
 
-    def send(self, packet):
-        self.__send(packet, None)
+    def send(self, packet, gamestate):
+        self.__send(packet, gamestate, None)
 
-    def send_encrypted(self, packet, encryptor):
-        self.__send(packet, encryptor)
+    def send_encrypted(self, packet, gamestate, encryptor):
+        self.__send(packet, gamestate, encryptor)
 
 class Serverbound:
-    def __init__(self, socket):
-        self.socket = socket
+    def receive(self, bytebuf, packet_id, gamestate, decryptor):
+        #Is this if statement reliable?
 
-    def receive(self, packet_length, packet_id):
-        print(packet_id)
-        if not packet_id in GameStates[get_gamestate()]["C2S"]:
+        game_state = gamestate.get_gamestate()
+        print(game_state)
+        if game_state not in GameStates or "C2S" not in GameStates[game_state] or packet_id not in GameStates[game_state]["C2S"]:
+            #Packets like 0x17 == 23 are not in the PacketMap because the game_state is not in the right state yet
             raise ValueError(f"Packet ID {packet_id} is not in the PacketMap")
 
-        packet = GameStates[get_gamestate()]["C2S"][packet_id]().create(packet_length, self.socket)
+
+        packet = GameStates[game_state]["C2S"][packet_id]().create(bytebuf, decryptor)
 
         return packet

@@ -1,15 +1,14 @@
 import struct
-from Packets.PacketUtil import unpack_varint
 
 class Handshake:
-    def create(self, remaining_packet_length, socket):
-        protocol_version, byte_length = unpack_varint(socket)
-        server_address_length, byte_length = unpack_varint(socket)
+    def create(self, bytebuf, decryptor):
+        protocol_version, byte_length = bytebuf.unpack_varint()
+        server_address_length, byte_length = bytebuf.unpack_varint()
         server_address = ""
         for i in range(server_address_length):
-            server_address += socket.recv(1).decode("utf-8")
-        server_port = struct.unpack(">H", socket.recv(2))[0]
-        next_state = int.from_bytes(socket.recv(1), byteorder="big")
+            server_address += bytebuf.recv(1).decode("utf-8")
+        server_port = struct.unpack('>H', bytebuf.recv(2))[0]
+        next_state = int.from_bytes(bytebuf.recv(1), byteorder='big')
 
         self.protocol_version = protocol_version
         self.server_address_length = server_address_length
