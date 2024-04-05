@@ -2,17 +2,13 @@ import sys
 sys.dont_write_bytecode = True
 import socket
 import struct
-import json
 import os
 import time
 import threading
-import uuid
 import requests
 
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from hashlib import sha1
-
-import Packets.PacketUtil
 
 from Packets.Serverbound.StatusRequest import StatusRequest
 from Packets.Serverbound.PingRequest import PingRequest
@@ -28,7 +24,10 @@ from Packets.Serverbound.SetPlayerPosition import SetPlayerPosition
 from Packets.Serverbound.SetPlayerPositionRotation import SetPlayerPositionRotation
 from Packets.Serverbound.SetPlayerRotation import SetPlayerRotation
 from Packets.Serverbound.PlayerSession import PlayerSession
+from Packets.Serverbound.SwingArm import SwingArm
 
+from Packets.Clientbound.SetHeadRotation import SetHeadRotation
+from Packets.Clientbound.EntityAnimation import EntityAnimation
 from Packets.Clientbound.PingResponse import PingResponse
 from Packets.Clientbound.StatusResponse import StatusResponse
 from Packets.Clientbound.EncryptionRequest import EncryptionRequest
@@ -42,8 +41,6 @@ from Packets.Clientbound.SetCenterChunk import SetCenterChunk
 from Packets.Clientbound.ChunkDataUpdateLight import ChunkDataUpdateLight
 from Packets.Clientbound.GameEvent import GameEvent
 from Packets.Clientbound.KeepAlive import KeepAlive
-from Packets.Clientbound.OpenBook import OpenBook
-from Packets.Clientbound.DisplayObjective import DisplayObjective
 from Packets.Clientbound.SetEntityMetadata import SetEntityMetadata
 from Packets.Clientbound.PlayerInfoUpdate import PlayerInfoUpdate
 from Packets.Clientbound.SpawnEntity import SpawnEntity
@@ -390,18 +387,17 @@ def main():
                         currentY = struct.unpack('>d', packet.get("y"))[0]
                         currentZ = struct.unpack('>d', packet.get("z"))[0]
 
-                        delta_x = int(currentX * 32 - prevX * 32) * 128
-                        delta_y = int(currentY * 32 - prevY * 32) * 128
-                        delta_z = int(currentZ * 32 - prevZ * 32) * 128
+                        delta_x = int((currentX * 32 - prevX * 32) * 128)
+                        delta_y = int((currentY * 32 - prevY * 32) * 128)
+                        delta_z = int((currentZ * 32 - prevZ * 32) * 128)
 
                         update_entity_position = UpdateEntityPosition(entity_id, delta_x, delta_y, delta_z, on_ground)
 
-                        networking.broadcast(update_entity_position, gamestate)
+                        networking.send_to_others(update_entity_position, client_socket, gamestate)
 
                         prevX = currentX
                         prevY = currentY
                         prevZ = currentZ
-
                     elif isinstance(packet, SetPlayerPositionRotation):
                         on_ground = packet.get("on_ground")
                         currentX = struct.unpack('>d', packet.get("x"))[0]
@@ -413,27 +409,32 @@ def main():
                         yaw = struct.unpack('>f', yaw)[0]
                         pitch = struct.unpack('>f', pitch)[0]
 
-                        yaw = int((yaw / 360.0) * 256.0) #convert
-                        pitch = int((pitch / 360.0) * 256.0) #convert
+                        print(yaw, pitch)
+
+                        yaw = int((yaw / 360.0) * 256.0) & 0xff #convert
+                        pitch = int((pitch / 360.0) * 256.0) & 0xff #convert
 
                         yaw = struct.pack("B", yaw)
                         pitch = struct.pack("B", pitch)
 
-                        print(yaw, pitch, on_ground)
+                        print(yaw, pitch)
 
-                        delta_x = int(currentX * 32 - prevX * 32) * 128
-                        delta_y = int(currentY * 32 - prevY * 32) * 128
-                        delta_z = int(currentZ * 32 - prevZ * 32) * 128
+                        delta_x = int((currentX * 32 - prevX * 32) * 128)
+                        delta_y = int((currentY * 32 - prevY * 32) * 128)
+                        delta_z = int((currentZ * 32 - prevZ * 32) * 128)
 
                         update_entity_position_rotation = UpdateEntityPositionRotation(entity_id, delta_x, delta_y, delta_z, yaw, pitch, on_ground)
 
-                        networking.broadcast(update_entity_position_rotation, gamestate)
+                        networking.send_to_others(update_entity_position_rotation, client_socket, gamestate)
+
+                        set_head_rotation = SetHeadRotation(entity_id, yaw)
+
+                        networking.send_to_others(set_head_rotation, client_socket, gamestate)
 
                         prevX = currentX
                         prevY = currentY
                         prevZ = currentZ
 
-                    """
                     elif isinstance(packet, SetPlayerRotation):
                         on_ground = packet.get("on_ground")
                         yaw = packet.get("yaw")
@@ -442,16 +443,35 @@ def main():
                         yaw = struct.unpack('>f', yaw)[0]
                         pitch = struct.unpack('>f', pitch)[0]
 
-                        yaw = int((yaw / 360.0) * 256.0) #convert
-                        pitch = int((pitch / 360.0) * 256.0) #convert
+                        yaw = int((yaw / 360.0) * 256.0) & 0xff #convert
+                        pitch = int((pitch / 360.0) * 256.0) & 0xff #convert
 
                         yaw = struct.pack("B", yaw)
                         pitch = struct.pack("B", pitch)
 
-                        update_entity_rotation = UpdateEntityRotation(entity_id, yaw, pitch)
+                        update_entity_rotation = UpdateEntityRotation(entity_id, yaw, pitch, on_ground)
 
-                        networking.broadcast(update_entity_rotation, gamestate)
-                    """
+                        networking.send_to_others(update_entity_rotation, client_socket, gamestate)
+
+                        set_head_rotation = SetHeadRotation(entity_id, yaw)
+
+                        networking.send_to_others(set_head_rotation, client_socket, gamestate)
+                    elif isinstance(packet, SwingArm):
+                        hand = packet.get("hand")
+
+                        print(hand)
+
+                        if hand == 0:
+                            animation = 0
+
+                        elif hand == 1:
+                            animation = 3
+
+                        entity_animation = EntityAnimation(entity_id, animation)
+
+                        networking.send_to_others(entity_animation, client_socket, gamestate)
+
+
 
 
             threading.Thread(target=keepListening).start()

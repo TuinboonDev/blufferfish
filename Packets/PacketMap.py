@@ -17,6 +17,7 @@ from Packets.Serverbound.ServerboundKeepAlive import ServerboundKeepAlive
 from Packets.Serverbound.PlayerCommand import PlayerCommand
 from Packets.Serverbound.SwingArm import SwingArm
 from Packets.Serverbound.PlayerAbilities import PlayerAbilities
+from Packets.Clientbound.SetHeadRotation import SetHeadRotation
 
 from Packets.Clientbound.StatusResponse import StatusResponse
 from Packets.Clientbound.LoginSuccess import LoginSuccess
@@ -40,6 +41,7 @@ from Packets.Clientbound.UpdateEntityPosition import UpdateEntityPosition
 from Packets.Clientbound.SetHeldItem import SetHeldItem
 from Packets.Clientbound.UpdateEntityPositionRotation import UpdateEntityPositionRotation
 from Packets.Clientbound.UpdateEntityRotation import UpdateEntityRotation
+from Packets.Clientbound.EntityAnimation import EntityAnimation
 
 class GameState:
     def __init__(self):
@@ -110,6 +112,8 @@ GameStates = {
             0x00: ConfirmTeleportation
         },
         "S2C": {
+            0x03: EntityAnimation,
+            0x46: SetHeadRotation,
             0x2D: UpdateEntityPositionRotation,
             0x2E: UpdateEntityRotation,
             0x51: SetHeldItem,

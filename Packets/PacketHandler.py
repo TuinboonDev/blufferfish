@@ -33,8 +33,9 @@ class Clientbound:
                 self.socket.send(pack_varint(len(final_packet)) + final_packet)
             return True
         except Exception as e:
-            print(f"Error sending packet: {e}")
-            return False
+            #print(f"Error sending packet: {e}")
+            raise e
+            #return False
 
     def send(self, packet, gamestate):
         self.__send(packet, gamestate, None)
@@ -47,7 +48,6 @@ class Serverbound:
         #Is this if statement reliable?
 
         game_state = gamestate.get_gamestate()
-        print(game_state)
         if game_state not in GameStates or "C2S" not in GameStates[game_state] or packet_id not in GameStates[game_state]["C2S"]:
             #Packets like 0x17 == 23 are not in the PacketMap because the game_state is not in the right state yet
             raise ValueError(f"Packet ID {packet_id} is not in the PacketMap")
