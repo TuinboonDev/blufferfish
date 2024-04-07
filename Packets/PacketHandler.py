@@ -1,5 +1,6 @@
 from Packets.PacketUtil import pack_varint
 from Packets.PacketMap import GameStates
+import sys
 
 class Clientbound:
     def __init__(self, socket):
@@ -32,10 +33,12 @@ class Clientbound:
             else:
                 self.socket.send(pack_varint(len(final_packet)) + final_packet)
             return True
+        except ConnectionAbortedError as e:
+            print("Client disconnected, shutting down keepalive thread")
+            sys.exit()
         except Exception as e:
-            #print(f"Error sending packet: {e}")
-            raise e
-            #return False
+            print(f"Error while sending packet: {e}")
+            return False
 
     def send(self, packet, gamestate):
         self.__send(packet, gamestate, None)

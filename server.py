@@ -1,6 +1,7 @@
 import sys
 sys.dont_write_bytecode = True
 import socket
+import traceback
 import struct
 import os
 import time
@@ -25,6 +26,7 @@ from Packets.Serverbound.SetPlayerPositionRotation import SetPlayerPositionRotat
 from Packets.Serverbound.SetPlayerRotation import SetPlayerRotation
 from Packets.Serverbound.PlayerSession import PlayerSession
 from Packets.Serverbound.SwingArm import SwingArm
+from Packets.Serverbound.PlayerCommand import PlayerCommand
 
 from Packets.Clientbound.SetHeadRotation import SetHeadRotation
 from Packets.Clientbound.EntityAnimation import EntityAnimation
@@ -74,8 +76,18 @@ def main():
 
     print("Listening on port", PORT)
 
+    class StopLoop(Exception):
+        def __init__ (self, message):
+            super().__init__("Stopping loop: ")
+
     def get_packet(serverbound, socket, gamestate):
-        packet_length, byte_length = unpack_varint(socket)
+        try:
+            packet_length, byte_length = unpack_varint(socket)
+        except TypeError:
+            networking.remove_client(socket)
+            general_player_handler.remove_player(socket)
+            print("Player disconnected")
+            sys.exit()
 
         buf = ByteBuffer(socket.recv(packet_length))
 
@@ -83,7 +95,13 @@ def main():
         return serverbound.receive(buf, packet_id, gamestate, None)
 
     def get_encrypted_packet(serverbound, socket, gamestate, decryptor):
-        packet_length, byte_length = unpack_encrypted_varint(socket, decryptor)
+        try:
+            packet_length, byte_length = unpack_encrypted_varint(socket, decryptor)
+        except TypeError:
+            networking.remove_client(socket)
+            general_player_handler.remove_player(socket)
+            print("Player disconnected")
+            sys.exit()
 
         buf = ByteBuffer(socket.recv(packet_length))
 
@@ -124,7 +142,7 @@ def main():
                     sample,
                     "\u00A73Bluffer\u00A7eFish",
                     "icon.png",
-                    True,
+                    False,
                     True
                 )
 
@@ -202,6 +220,7 @@ def main():
                         encryptor = cipher.encryptor()
                         decryptor = cipher.decryptor()
 
+                        networking.add_client(client_socket)
                         networking.add_encryptor(client_socket, encryptor)
 
                         login_success = LoginSuccess(uuid_bytes, name, b'')
@@ -366,7 +385,7 @@ def main():
 
 
             for player in all_players:
-                set_entity_metadata = SetEntityMetadata(player["entity_id"], 17, 0, player["skin_parts"])
+                set_entity_metadata = SetEntityMetadata(player["entity_id"], [{"index": 17, "value_type": 0, "value": player["skin_parts"]}])
 
                 networking.broadcast(set_entity_metadata, gamestate)
 
@@ -409,15 +428,11 @@ def main():
                         yaw = struct.unpack('>f', yaw)[0]
                         pitch = struct.unpack('>f', pitch)[0]
 
-                        print(yaw, pitch)
-
                         yaw = int((yaw / 360.0) * 256.0) & 0xff #convert
                         pitch = int((pitch / 360.0) * 256.0) & 0xff #convert
 
                         yaw = struct.pack("B", yaw)
                         pitch = struct.pack("B", pitch)
-
-                        print(yaw, pitch)
 
                         delta_x = int((currentX * 32 - prevX * 32) * 128)
                         delta_y = int((currentY * 32 - prevY * 32) * 128)
@@ -459,8 +474,6 @@ def main():
                     elif isinstance(packet, SwingArm):
                         hand = packet.get("hand")
 
-                        print(hand)
-
                         if hand == 0:
                             animation = 0
 
@@ -470,9 +483,32 @@ def main():
                         entity_animation = EntityAnimation(entity_id, animation)
 
                         networking.send_to_others(entity_animation, client_socket, gamestate)
+                    elif isinstance(packet, PlayerCommand):
+                        action_id = packet.get("action_id")
 
+                        bit_mask = 0
+                        value = b''
 
+                        if action_id == 0:
+                            value = b'\x05'
+                            bit_mask |= 0x02
+                        if action_id == 1:
+                            value = b'\x00'
+                        if action_id == 3:
+                            bit_mask |= 0x08
+                        #if action_id == 4:
+                        #    pass
+                        # Player stops sprinting (no bitmask needed)
 
+                        bit_mask = struct.pack("B", bit_mask)
+
+                        entries = []
+                        entries.append({"index": 0, "value_type": 0, "value": bit_mask})
+                        entries.append({"index": 6, "value_type": 20, "value": value}) if value != b'' else None
+
+                        set_entity_metadata = SetEntityMetadata(packet.get("entity_id"), entries)
+
+                        networking.send_to_others(set_entity_metadata, client_socket, gamestate)
 
             threading.Thread(target=keepListening).start()
 
@@ -488,10 +524,6 @@ def main():
 
     while True:
         client_socket, address = server_socket.accept()
-
-        test = ''
-
-        networking.add_client(client_socket)
 
         new_connection = threading.Thread(target=handle, args=(client_socket, networking))
         new_connection.start()

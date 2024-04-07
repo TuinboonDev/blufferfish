@@ -7,9 +7,9 @@ class GeneralPlayerHandler:
         self.players.append({"name": name, "uuid": uuid, "entity_id": self.player_count, "properties": properties, "skin_parts": skin_parts, "socket": socket})
         self.player_count += 1
 
-    def remove_player(self, uuid):
+    def remove_player(self, socket):
         for player in self.players:
-            if player["uuid"] == uuid:
+            if player["socket"] == socket:
                 self.players.remove(player)
                 self.player_count -= 1
                 break

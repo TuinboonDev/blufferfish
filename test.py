@@ -1,9 +1,10 @@
-import struct
+import sys
 
-# Your float or double
-value = 123.456
+print("a")
 
-# Pack as float
-packed_value = struct.pack('>h', value)
+try:
+    raise Exception()
+except:
+    sys.exit()
 
-print(packed_value)
+print("b")

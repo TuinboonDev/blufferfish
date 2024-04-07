@@ -100,6 +100,7 @@ GameStates = {
 
     "PLAY": {
         "C2S": {
+            0x10: ServerboundPluginMessage,
             0x20: PlayerAbilities,
             0x33: SwingArm,
             0x22: PlayerCommand,
