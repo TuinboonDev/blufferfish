@@ -14,5 +14,3 @@ class SetEntityMetadata:
         self.entity_id = entity_id
         self.entry_data = entry_data
         self.end_byte = b'\xff' #end byte somehow
-
-        print(self.__dict__)

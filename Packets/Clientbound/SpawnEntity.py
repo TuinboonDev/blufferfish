@@ -11,6 +11,10 @@ class SpawnEntity:
         y = struct.pack('>d', y)
         z = struct.pack('>d', z)
 
+        pitch = struct.pack('B', pitch)
+        yaw = struct.pack('B', yaw)
+        head_yaw = struct.pack('B', head_yaw)
+
         data = pack_varint(data)
 
         velocity_x = struct.pack('h', velocity_x)

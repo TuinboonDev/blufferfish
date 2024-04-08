@@ -83,17 +83,18 @@ def main():
 
     print("Listening on port", PORT)
 
-    class StopLoop(Exception):
-        def __init__ (self, message):
-            super().__init__("Stopping loop: ")
+    class ClientError:
+        def __init__(self, message):
+            print("b")
+            print(f"\u001b[33m{message}\033[0m")
 
     def get_packet(serverbound, socket, gamestate):
         try:
             packet_length, byte_length = unpack_varint(socket)
         except TypeError:
+            ClientError("Client disconnected")
             networking.remove_client(socket)
             general_player_handler.remove_player(socket)
-            print("Player disconnected")
             sys.exit()
 
         buf = ByteBuffer(socket.recv(packet_length))
@@ -106,9 +107,9 @@ def main():
             packet_length, byte_length = unpack_encrypted_varint(socket, decryptor)
         except TypeError:
             #TODO: add custom client disconnect error
+            ClientError("Client disconnected")
             networking.remove_client(socket)
             general_player_handler.remove_player(socket)
-            print("Player disconnected")
             sys.exit()
 
         buf = ByteBuffer(socket.recv(packet_length))
@@ -122,7 +123,7 @@ def main():
 
         gamestate = GameState()
 
-        print("Connection from", address)
+        print("\u001b[32mConnection from", address, "\u001b[0m")
 
         if gamestate.get_gamestate() == "HANDSHAKE":
             packet = get_packet(serverbound, client_socket, gamestate)
@@ -311,15 +312,18 @@ def main():
 
             # ----
 
+            position = general_player_handler.get_position(entity_id)
+            rotation = general_player_handler.get_rotation(entity_id)
+
             teleport_id = 123
 
-            sync_player_pos = SyncronizePlayerPosition(8,320,8, 0, 0, b'\x00', teleport_id)
+            sync_player_pos = SyncronizePlayerPosition(position[0], position[1], position[2], rotation[0], rotation[1], b'\x00', teleport_id)
 
             clientbound.send_encrypted(sync_player_pos, gamestate, encryptor)
 
             # Set default spawn pos
 
-            set_default_spawn_pos = SetDefaultSpawnPosition(8, 320, 8, 0)
+            set_default_spawn_pos = SetDefaultSpawnPosition(position[0], position[1], position[2], rotation[0])
 
             clientbound.send_encrypted(set_default_spawn_pos, gamestate, encryptor)
 
@@ -390,7 +394,9 @@ def main():
             other_players = general_player_handler.get_all_other_players(name)
 
             for player in other_players:
-                spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 8, 320, 8, b'\x00', b'\x00', b'\x00', 0, 0, 0, 0)
+                position = general_player_handler.get_position(player["entity_id"])
+                rotation = general_player_handler.get_rotation(player["entity_id"])
+                spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, position[0], position[1], position[2], rotation[0], rotation[1], rotation[1], 0, 0, 0, 0)
 
                 clientbound.send_encrypted(spawn_entity, gamestate, encryptor)
 
@@ -401,7 +407,9 @@ def main():
             if player_count - 1 > 0:
                 for player in all_players:
                     if player["name"] == name:
-                        spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, 8, 320, 8, b'\x00', b'\x00', b'\x00', 0, 0, 0, 0)
+                        position = general_player_handler.get_position(player["entity_id"])
+                        rotation = general_player_handler.get_rotation(player["entity_id"])
+                        spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, position[0], position[1], position[2], rotation[0], rotation[1], rotation[1], 0, 0, 0, 0)
                         networking.send_to_others(spawn_entity, client_socket, gamestate)
 
 
@@ -413,11 +421,12 @@ def main():
                 networking.broadcast(set_entity_metadata, gamestate)
 
             def keepListening():
-                prevX = 8
-                prevY = 320
-                prevZ = 8
                 while True:
-                    #general_player_handler.get_online_players()[0]["socket"]
+                    position = general_player_handler.get_position(entity_id)
+
+                    prevX = position[0]
+                    prevY = position[1]
+                    prevZ = position[2]
 
                     packet = get_encrypted_packet(serverbound, client_socket, gamestate, decryptor)
                     if isinstance(packet, PlayerSession):
@@ -429,6 +438,8 @@ def main():
                         currentY = struct.unpack('>d', packet.get("y"))[0]
                         currentZ = struct.unpack('>d', packet.get("z"))[0]
 
+                        general_player_handler.set_position(entity_id, (currentX, currentY, currentZ))
+
                         delta_x = int((currentX * 32 - prevX * 32) * 128)
                         delta_y = int((currentY * 32 - prevY * 32) * 128)
                         delta_z = int((currentZ * 32 - prevZ * 32) * 128)
@@ -437,9 +448,6 @@ def main():
 
                         networking.send_to_others(update_entity_position, client_socket, gamestate)
 
-                        prevX = currentX
-                        prevY = currentY
-                        prevZ = currentZ
                     elif isinstance(packet, SetPlayerPositionRotation):
                         on_ground = packet.get("on_ground")
                         currentX = struct.unpack('>d', packet.get("x"))[0]
@@ -448,11 +456,15 @@ def main():
                         yaw = packet.get("yaw")
                         pitch = packet.get("pitch")
 
+                        general_player_handler.set_position(entity_id, (currentX, currentY, currentZ))
+
                         yaw = struct.unpack('>f', yaw)[0]
                         pitch = struct.unpack('>f', pitch)[0]
 
                         yaw = int((yaw / 360.0) * 256.0) & 0xff #convert
                         pitch = int((pitch / 360.0) * 256.0) & 0xff #convert
+
+                        general_player_handler.set_rotation(entity_id, (pitch, yaw))
 
                         yaw = struct.pack("B", yaw)
                         pitch = struct.pack("B", pitch)
@@ -469,10 +481,6 @@ def main():
 
                         networking.send_to_others(set_head_rotation, client_socket, gamestate)
 
-                        prevX = currentX
-                        prevY = currentY
-                        prevZ = currentZ
-
                     elif isinstance(packet, SetPlayerRotation):
                         on_ground = packet.get("on_ground")
                         yaw = packet.get("yaw")
@@ -483,6 +491,8 @@ def main():
 
                         yaw = int((yaw / 360.0) * 256.0) & 0xff #convert
                         pitch = int((pitch / 360.0) * 256.0) & 0xff #convert
+
+                        general_player_handler.set_rotation(entity_id, (pitch, yaw))
 
                         yaw = struct.pack("B", yaw)
                         pitch = struct.pack("B", pitch)

@@ -1,18 +1,6 @@
 import struct
 from Packets.PacketUtil import pack_data, pack_varint
 
-def write_paletted_container(bits_per_entry, palette, data_array):
-    data = b''
-    data += struct.pack('b', bits_per_entry) #bits per entry
-    if palette == "block":
-        data += pack_varint(0) #single valued palette format?
-    if palette == "biome":
-        data += pack_varint(0) #same as that ^
-    #I need to change the palettes because idk what to do with them
-    data += pack_data(data_array) #data array
-
-    return data
-
 def write_single_valued_paletted_container(entry):
     data = b''
     data += struct.pack('b', 0) # bits per entry
