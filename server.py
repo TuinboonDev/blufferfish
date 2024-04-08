@@ -60,6 +60,13 @@ from Encryption import Encryption
 from Networking import Networking
 from Handlers.GeneralPlayerHandler import GeneralPlayerHandler
 
+print("""
+\u001b[36m ____  __    __  __  ____  ____  ____  ____    \u001b[33;1m____  ____  ___  _   _ 
+\u001b[36m(  _ \(  )  (  )(  )( ___)( ___)( ___)(  _ \  \u001b[33;1m( ___)(_  _)/ __)( )_( )
+\u001b[36m ) _ < )(__  )(__)(  )__)  )__)  )__)  )   /   \u001b[33;1m)__)  _)(_ \__ \ ) _ ( 
+\u001b[36m(____/(____)(______)(__)  (__)  (____)(_)\_)  \u001b[33;1m(__)  (____)(___/(_) (_)
+                                                                                            \033[0m""")
+
 def main():
     # Define the port to listen on
     PORT = 25565
@@ -98,6 +105,7 @@ def main():
         try:
             packet_length, byte_length = unpack_encrypted_varint(socket, decryptor)
         except TypeError:
+            #TODO: add custom client disconnect error
             networking.remove_client(socket)
             general_player_handler.remove_player(socket)
             print("Player disconnected")
@@ -329,8 +337,23 @@ def main():
 
             # Chunk Data and Update Light
 
-            chunk_data_update_light = ChunkDataUpdateLight(0, 0, b'', b'')
-            clientbound.send_encrypted(chunk_data_update_light, gamestate, encryptor)
+            width = 20
+            height = 20
+
+            center = 0
+
+            start = (width // 2, height // 2)
+
+            x_coord = center - start[0]
+            y_coord = center - start[1]
+
+            for x in range(width + 1 if width % 2 == 0 else width):
+                for y in range(height + 1 if height % 2 == 0 else height):
+                    chunk_data_update_light = ChunkDataUpdateLight(x_coord, y_coord, b'', b'')
+                    clientbound.send_encrypted(chunk_data_update_light, gamestate, encryptor)
+                    y_coord += 1
+                x_coord += 1
+                y_coord = center - start[1]
 
             # tp confirm
             packet = get_encrypted_packet(serverbound, client_socket, gamestate, decryptor)

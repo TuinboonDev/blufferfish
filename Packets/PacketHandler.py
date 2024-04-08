@@ -34,6 +34,7 @@ class Clientbound:
                 self.socket.send(pack_varint(len(final_packet)) + final_packet)
             return True
         except ConnectionAbortedError as e:
+            #TODO: add custom client disconnect error
             print("Client disconnected, shutting down keepalive thread")
             sys.exit()
         except Exception as e:
