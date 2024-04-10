@@ -17,8 +17,12 @@ from Packets.Serverbound.ServerboundKeepAlive import ServerboundKeepAlive
 from Packets.Serverbound.PlayerCommand import PlayerCommand
 from Packets.Serverbound.SwingArm import SwingArm
 from Packets.Serverbound.PlayerAbilities import PlayerAbilities
-from Packets.Clientbound.SetHeadRotation import SetHeadRotation
+from Packets.Serverbound.PlayerAction import PlayerAction
 
+from Packets.Clientbound.WorldEvent import WorldEvent
+from Packets.Clientbound.BlockUpdate import BlockUpdate
+from Packets.Clientbound.AcknowledgeBlockChange import AcknowledgeBlockChange
+from Packets.Clientbound.SetHeadRotation import SetHeadRotation
 from Packets.Clientbound.StatusResponse import StatusResponse
 from Packets.Clientbound.LoginSuccess import LoginSuccess
 from Packets.Clientbound.EncryptionRequest import EncryptionRequest
@@ -100,6 +104,7 @@ GameStates = {
 
     "PLAY": {
         "C2S": {
+            0x21: PlayerAction,
             0x10: ServerboundPluginMessage,
             0x20: PlayerAbilities,
             0x33: SwingArm,
@@ -113,6 +118,9 @@ GameStates = {
             0x00: ConfirmTeleportation
         },
         "S2C": {
+            0x26: WorldEvent,
+            0x09: BlockUpdate,
+            0x05: AcknowledgeBlockChange,
             0x03: EntityAnimation,
             0x46: SetHeadRotation,
             0x2D: UpdateEntityPositionRotation,

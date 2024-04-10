@@ -27,7 +27,10 @@ from Packets.Serverbound.SetPlayerRotation import SetPlayerRotation
 from Packets.Serverbound.PlayerSession import PlayerSession
 from Packets.Serverbound.SwingArm import SwingArm
 from Packets.Serverbound.PlayerCommand import PlayerCommand
+from Packets.Serverbound.PlayerAction import PlayerAction
 
+from Packets.Clientbound.WorldEvent import WorldEvent
+from Packets.Clientbound.BlockUpdate import BlockUpdate
 from Packets.Clientbound.SetHeadRotation import SetHeadRotation
 from Packets.Clientbound.EntityAnimation import EntityAnimation
 from Packets.Clientbound.PingResponse import PingResponse
@@ -50,6 +53,7 @@ from Packets.Clientbound.UpdateEntityPosition import UpdateEntityPosition
 from Packets.Clientbound.SetHeldItem import SetHeldItem
 from Packets.Clientbound.UpdateEntityPositionRotation import UpdateEntityPositionRotation
 from Packets.Clientbound.UpdateEntityRotation import UpdateEntityRotation
+from Packets.Clientbound.AcknowledgeBlockChange import AcknowledgeBlockChange
 
 from Packets.PacketHandler import Clientbound, Serverbound
 from Packets.ServerData import ServerData
@@ -542,6 +546,20 @@ def main():
                         set_entity_metadata = SetEntityMetadata(packet.get("entity_id"), entries)
 
                         networking.send_to_others(set_entity_metadata, client_socket, gamestate)
+                    elif isinstance(packet, PlayerAction):
+                        acknowledge_block_change = AcknowledgeBlockChange(packet.get("sequence_id"))
+
+                        clientbound.send(acknowledge_block_change, gamestate)
+
+                        #TODO: add break speed checker
+                        block_update = BlockUpdate(packet.get("position"), 0)
+
+                        networking.send_to_others(block_update, client_socket, gamestate)
+
+                        world_event = WorldEvent(2001, packet.get("position"), 1, False)
+
+                        networking.send_to_others(world_event, client_socket, gamestate)
+                        print("Player Action")
 
             threading.Thread(target=keepListening).start()
 
