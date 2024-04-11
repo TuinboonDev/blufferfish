@@ -1,8 +1,11 @@
 from Packets.PacketUtil import pack_varint
+from Util import enforce_annotations
+
 import struct
 
 class SpawnEntity:
-    def __init__(self, entity_id, entity_uuid, entity_type, x, y, z, pitch, yaw, head_yaw, data, velocity_x, velocity_y, velocity_z):
+    @enforce_annotations
+    def __init__(self, entity_id: int, entity_uuid: bytes, entity_type: int, x: int, y: int, z: int, pitch: int, yaw: int, head_yaw: int, data: int, velocity_x: int, velocity_y: int, velocity_z: int):
         entity_id = pack_varint(entity_id)
 
         entity_type = pack_varint(entity_type)

@@ -1,7 +1,9 @@
-from Packets.PacketUtil import pack_data, write_string, pack_varint
+from Packets.PacketUtil import pack_data, write_string
+from Util import enforce_annotations
 
 class LoginSuccess:
-    def __init__(self, uuid, username, properties):
+    @enforce_annotations
+    def __init__(self, uuid: bytes, username: str, properties: bytes):
         username = write_string(username)
 
         properties = pack_data(properties)

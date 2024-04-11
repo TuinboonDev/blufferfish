@@ -1,7 +1,9 @@
-from Packets.PacketUtil import pack_varint
+from Util import enforce_annotations
+
 import struct
 
-def encode_coordinates(x, z, y):
+@enforce_annotations
+def encode_coordinates(x: int, z: int, y: int):
     # Ensure values are within range
     x &= 0x3FFFFFF  # 26 bits mask
     z &= 0x3FFFFFF  # 26 bits mask
@@ -20,7 +22,8 @@ def encode_coordinates(x, z, y):
 
     return encoded_value
 class SetDefaultSpawnPosition:
-    def __init__(self, x, y, z, angle):
+    @enforce_annotations
+    def __init__(self, x: int, y: int, z: int, angle: int):
         encoded_coordinates = encode_coordinates(x, z, y)
         location = struct.pack('>Q', encoded_coordinates)
 

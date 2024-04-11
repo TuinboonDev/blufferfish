@@ -1,7 +1,10 @@
+from Util import enforce_annotations
+
 import base64
 
 class ServerData:
-    def __init__(self, name, protocl, max, online, sample, description, icon, secureChat, previewsChat):
+    @enforce_annotations
+    def __init__(self, name: str, protocol: int, max: int, online: int, sample: list, description: str, icon: str, secureChat: bool, previewsChat: bool):
         self.data = {
             "version": {},
             "players": {
@@ -11,7 +14,7 @@ class ServerData:
         }
 
         self.data["version"]["name"] = name
-        self.data["version"]["protocol"] = protocl
+        self.data["version"]["protocol"] = protocol
 
         self.data["players"]["max"] = max
         self.data["players"]["online"] = online

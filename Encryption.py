@@ -3,8 +3,11 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.asymmetric import rsa
 
+from Util import enforce_annotations
+
 class Encryption:
-    def create_cipher(self, shared_secret):
+    @enforce_annotations
+    def create_cipher(self, shared_secret: bytes):
         self.cipher = Cipher(algorithms.AES(shared_secret),
                         modes.CFB8(shared_secret),
                         backend=default_backend())
@@ -12,10 +15,12 @@ class Encryption:
     def get_cipher(self):
         return self.cipher
 
-    def encrypt(self, data):
+    @enforce_annotations
+    def encrypt(self, data: bytes):
         return self.cipher.encryptor().update(data)
 
-    def decrypt(self, data):
+    @enforce_annotations
+    def decrypt(self, data: bytes):
         return self.cipher.decryptor().update(data)
 
     def gen_keys(self):

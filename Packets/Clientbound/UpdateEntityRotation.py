@@ -1,8 +1,9 @@
-import struct
-from Packets.PacketUtil import pack_varint, pack_data
+from Packets.PacketUtil import pack_varint
+from Util import enforce_annotations
 
 class UpdateEntityRotation:
-    def __init__(self, entity_id, yaw, pitch, on_ground):
+    @enforce_annotations
+    def __init__(self, entity_id: int, yaw: bytes, pitch: bytes, on_ground: bytes):
         entity_id = pack_varint(entity_id)
 
         self.entity_id = entity_id

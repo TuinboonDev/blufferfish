@@ -1,7 +1,10 @@
+from Util import enforce_annotations
+
 import struct
 
 class GameEvent:
-    def __init__(self, event, value):
+    @enforce_annotations
+    def __init__(self, event: int, value: int):
         event = struct.pack('>B', event)
         value = struct.pack('f', value)
 

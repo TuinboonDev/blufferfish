@@ -1,3 +1,6 @@
+from Util import enforce_annotations
+
 class PingResponse:
-    def __init__(self, time):
+    @enforce_annotations
+    def __init__(self, time: bytes):
         self.time = time

@@ -1,7 +1,9 @@
 from Packets.PacketUtil import pack_varint, write_string
+from Util import enforce_annotations
 
 class PlayerInfoUpdate:
-    def __init__(self, actions, player_actions, properties):
+    @enforce_annotations
+    def __init__(self, actions: list, player_actions: list, properties: dict):
         number_of_players = pack_varint(len(player_actions))
 
         players_field = b''

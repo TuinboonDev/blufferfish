@@ -1,7 +1,9 @@
 from Packets.PacketUtil import pack_varint
+from Util import enforce_annotations
 
 class OpenBook:
-    def __init__(self, hand):
+    @enforce_annotations
+    def __init__(self, hand: int):
         hand = pack_varint(hand)
 
         self.hand = hand

@@ -1,7 +1,9 @@
 from Packets.PacketUtil import pack_varint
+from Util import enforce_annotations
 
 class SetCenterChunk:
-    def __init__(self, x, z):
+    @enforce_annotations
+    def __init__(self, x: int, z: int):
         x = pack_varint(x)
         z = pack_varint(z)
 

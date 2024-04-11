@@ -1,8 +1,10 @@
 from Packets.PacketUtil import pack_varint
+from Util import enforce_annotations
 import struct
 
 class SetEntityMetadata:
-    def __init__(self, entity_id, entries):
+    @enforce_annotations
+    def __init__(self, entity_id: int, entries: list):
         entity_id = pack_varint(entity_id)
 
         entry_data = b''

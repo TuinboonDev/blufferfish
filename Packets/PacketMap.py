@@ -19,6 +19,7 @@ from Packets.Serverbound.SwingArm import SwingArm
 from Packets.Serverbound.PlayerAbilities import PlayerAbilities
 from Packets.Serverbound.PlayerAction import PlayerAction
 
+from Packets.Clientbound.SetTabListHeaderFooter import SetTabListHeaderFooter
 from Packets.Clientbound.WorldEvent import WorldEvent
 from Packets.Clientbound.BlockUpdate import BlockUpdate
 from Packets.Clientbound.AcknowledgeBlockChange import AcknowledgeBlockChange
@@ -47,11 +48,14 @@ from Packets.Clientbound.UpdateEntityPositionRotation import UpdateEntityPositio
 from Packets.Clientbound.UpdateEntityRotation import UpdateEntityRotation
 from Packets.Clientbound.EntityAnimation import EntityAnimation
 
+from Util import enforce_annotations
+
 class GameState:
     def __init__(self):
         self.gamestate = "HANDSHAKE"
 
-    def set_gamestate(self, state):
+    @enforce_annotations
+    def set_gamestate(self, state: str):
         if state in GameStates:
             self.gamestate = state
         else:
@@ -118,6 +122,7 @@ GameStates = {
             0x00: ConfirmTeleportation
         },
         "S2C": {
+            0x6A: SetTabListHeaderFooter,
             0x26: WorldEvent,
             0x09: BlockUpdate,
             0x05: AcknowledgeBlockChange,

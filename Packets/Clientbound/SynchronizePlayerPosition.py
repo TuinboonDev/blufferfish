@@ -1,7 +1,11 @@
 from Packets.PacketUtil import pack_varint
+from Util import enforce_annotations
+
 import struct
+
 class SyncronizePlayerPosition:
-    def __init__(self, x, y, z, yaw, pitch, flags, teleport_id):
+    @enforce_annotations
+    def __init__(self, x: int, y: int, z: int, yaw: int, pitch: int, flags: bytes, teleport_id: int):
         double_x = struct.pack('>d', x)
         double_y = struct.pack('>d', y)
         double_z = struct.pack('>d', z)

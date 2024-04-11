@@ -1,7 +1,6 @@
 import sys
 sys.dont_write_bytecode = True
 import socket
-import traceback
 import struct
 import os
 import time
@@ -29,6 +28,7 @@ from Packets.Serverbound.SwingArm import SwingArm
 from Packets.Serverbound.PlayerCommand import PlayerCommand
 from Packets.Serverbound.PlayerAction import PlayerAction
 
+from Packets.Clientbound.SetTabListHeaderFooter import SetTabListHeaderFooter
 from Packets.Clientbound.WorldEvent import WorldEvent
 from Packets.Clientbound.BlockUpdate import BlockUpdate
 from Packets.Clientbound.SetHeadRotation import SetHeadRotation
@@ -63,6 +63,8 @@ from Packets.PacketUtil import ByteBuffer, unpack_varint, unpack_encrypted_varin
 from Encryption import Encryption
 from Networking import Networking
 from Handlers.GeneralPlayerHandler import GeneralPlayerHandler
+from Exceptions import ClientError
+from Util import enforce_annotations
 
 print("""
 \u001b[36m ____  __    __  __  ____  ____  ____  ____    \u001b[33;1m____  ____  ___  _   _ 
@@ -87,12 +89,8 @@ def main():
 
     print("Listening on port", PORT)
 
-    class ClientError:
-        def __init__(self, message):
-            print("b")
-            print(f"\u001b[33m{message}\033[0m")
-
-    def get_packet(serverbound, socket, gamestate):
+    @enforce_annotations
+    def get_packet(serverbound: Serverbound, socket: socket.socket, gamestate: GameState):
         try:
             packet_length, byte_length = unpack_varint(socket)
         except TypeError:
@@ -106,7 +104,8 @@ def main():
         packet_id, byte_length = buf.unpack_varint()
         return serverbound.receive(buf, packet_id, gamestate, None)
 
-    def get_encrypted_packet(serverbound, socket, gamestate, decryptor):
+    @enforce_annotations
+    def get_encrypted_packet(serverbound: Serverbound, socket: socket.socket, gamestate: GameState, decryptor):
         try:
             packet_length, byte_length = unpack_encrypted_varint(socket, decryptor)
         except TypeError:
@@ -120,8 +119,9 @@ def main():
 
         packet_id, byte_length = buf.unpack_encrypted_varint(decryptor)
         return serverbound.receive(buf, packet_id, gamestate, decryptor)
-    
-    def handle(client_socket, networking):
+
+    @enforce_annotations
+    def handle(client_socket: socket.socket, networking: Networking):
         clientbound = Clientbound(client_socket)
         serverbound = Serverbound()
 
@@ -279,7 +279,7 @@ def main():
                 print("Configuration Finished")
 
         if gamestate.get_gamestate() == "PLAY":
-            general_player_handler.add_player(name, uuid_bytes, session_json["properties"], skin_parts, client_socket)
+            general_player_handler.add_player(name, uuid_bytes, session_json, skin_parts, client_socket)
             entity_id = general_player_handler.get_entity_id(uuid_bytes)
 
 
@@ -382,11 +382,11 @@ def main():
             all_players = general_player_handler.get_online_players()
 
             for player in all_players:
-                add_player = PlayerInfoUpdate([0x01, 0x08], [{"uuid": player["uuid"], "name": player["name"], "show": True}],
-                                              {"name": player["properties"][0]["name"],
-                                               "value": player["properties"][0]["value"],
+                add_player = PlayerInfoUpdate([0x01, 0x08], [{"uuid": player.uuid, "name": player.name, "show": True}],
+                                              {"name": player.session["properties"][0]["name"],
+                                               "value": player.session["properties"][0]["value"],
                                                "is_signed": True,
-                                               "signature": player["properties"][0]["signature"]})
+                                               "signature": player.session["properties"][0]["signature"]})
 
 
                 networking.broadcast(add_player, gamestate)
@@ -398,9 +398,9 @@ def main():
             other_players = general_player_handler.get_all_other_players(name)
 
             for player in other_players:
-                position = general_player_handler.get_position(player["entity_id"])
-                rotation = general_player_handler.get_rotation(player["entity_id"])
-                spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, position[0], position[1], position[2], rotation[0], rotation[1], rotation[1], 0, 0, 0, 0)
+                position = general_player_handler.get_position(player.entity_id)
+                rotation = general_player_handler.get_rotation(player.entity_id)
+                spawn_entity = SpawnEntity(player.entity_id, player.uuid, 124, position[0], position[1], position[2], rotation[0], rotation[1], rotation[1], 0, 0, 0, 0)
 
                 clientbound.send_encrypted(spawn_entity, gamestate, encryptor)
 
@@ -410,17 +410,17 @@ def main():
 
             if player_count - 1 > 0:
                 for player in all_players:
-                    if player["name"] == name:
-                        position = general_player_handler.get_position(player["entity_id"])
-                        rotation = general_player_handler.get_rotation(player["entity_id"])
-                        spawn_entity = SpawnEntity(player["entity_id"], player["uuid"], 124, position[0], position[1], position[2], rotation[0], rotation[1], rotation[1], 0, 0, 0, 0)
+                    if player.name == name:
+                        position = general_player_handler.get_position(player.entity_id)
+                        rotation = general_player_handler.get_rotation(player.entity_id)
+                        spawn_entity = SpawnEntity(player.entity_id, player.uuid, 124, position[0], position[1], position[2], rotation[0], rotation[1], rotation[1], 0, 0, 0, 0)
                         networking.send_to_others(spawn_entity, client_socket, gamestate)
 
 
 
 
             for player in all_players:
-                set_entity_metadata = SetEntityMetadata(player["entity_id"], [{"index": 17, "value_type": 0, "value": player["skin_parts"]}])
+                set_entity_metadata = SetEntityMetadata(player.entity_id, [{"index": 17, "value_type": 0, "value": player.skin_parts}])
 
                 networking.broadcast(set_entity_metadata, gamestate)
 
@@ -563,24 +563,23 @@ def main():
 
             threading.Thread(target=keepListening).start()
 
-            print('crazy?')
+            def updateTab():
+                set_tablist_header_footer = SetTabListHeaderFooter("H", "A")
 
+                networking.broadcast(set_tablist_header_footer, gamestate)
+
+            threading.Thread(target=updateTab).start()
 
 
     networking = Networking()
 
     general_player_handler = GeneralPlayerHandler()
 
-    entity_id = 0
-
     while True:
         client_socket, address = server_socket.accept()
 
         new_connection = threading.Thread(target=handle, args=(client_socket, networking))
         new_connection.start()
-
-        entity_id += 1
-        
 
 if __name__ == "__main__":
     main()

@@ -1,13 +1,17 @@
+from Util import enforce_annotations
+
 import struct
 
 class ByteBuffer:
-    def __init__(self, bytes):
+    @enforce_annotations
+    def __init__(self, bytes: bytes):
         self.buffer = bytearray(bytes)
 
     def __len__(self):
         return len(self.buffer)
 
-    def recv(self, length):
+    @enforce_annotations
+    def recv(self, length: int):
         data = self.buffer[:length]
         self.buffer = self.buffer[length:]
         return data
@@ -49,7 +53,8 @@ class ByteBuffer:
     def decrypt_byte(self, b, decryptor):
         return decryptor.update(b)
 
-    def unpack_varint_bytes(self, byte_string):
+    @enforce_annotations
+    def unpack_varint_bytes(self, byte_string: bytes):
         result = 0
         shift = 0
         for byte in byte_string:
@@ -60,7 +65,8 @@ class ByteBuffer:
                 break
         return result
 
-def pack_varint(d):
+@enforce_annotations
+def pack_varint(d: int):
     o = b""
     while True:
         b = d & 0x7F
@@ -70,14 +76,17 @@ def pack_varint(d):
             break
     return o
 
-def pack_data(d):
+@enforce_annotations
+def pack_data(d: bytes):
     return pack_varint(len(d)) + d
 
-def write_string(s):
+@enforce_annotations
+def write_string(s: str):
     s = bytes(s, encoding="utf-8")
     return pack_varint(len(s)) + s
 
-def unpack_varint(buf):
+@enforce_annotations
+def unpack_varint(buf: ByteBuffer):
     d = 0
     bytes_length = 0
     for i in range(5):
@@ -88,7 +97,8 @@ def unpack_varint(buf):
             break
     return d, bytes_length
 
-def unpack_encrypted_varint(buf, decryptor):
+@enforce_annotations
+def unpack_encrypted_varint(buf: ByteBuffer, decryptor):
     if not decryptor:
         raise FileNotFoundError("Decryptor not set")
     d = 0

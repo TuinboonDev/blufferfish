@@ -1,7 +1,9 @@
 from Packets.PacketUtil import write_string, pack_data
+from Util import enforce_annotations
 
 class EncryptionRequest:
-    def __init__(self, server_id, public_key, verify_token):
+    @enforce_annotations
+    def __init__(self, server_id: str, public_key: bytes, verify_token: bytes):
         server_id = write_string(server_id)
 
         public_key = pack_data(public_key)

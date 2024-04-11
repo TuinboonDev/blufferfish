@@ -1,28 +1,26 @@
-class AnnotationException(Exception):
-    __module__ = Exception.__module__
+def unpack_varint():
+    return "lol"
 
-def enfore_annotations(func):
-    def wrapper(*args):
-        print(len(func.__annotations__))
-        for x in range(len(func.__annotations__)):
-            if not (type(args[x]) == list(func.__annotations__.values())[x]):
-                raise AnnotationException(f"Expected {list(func.__annotations__.values())[x]} but got {type(args[x])} at argument {x}")
-        return func(*args)
-    return wrapper
+class PacketPayloads:
+    VARINT = unpack_varint
+    STRING = 1
+    BYTE = unpack_varint()
+    SHORT = 3
 
-@enfore_annotations
-def test(a, b):
-    return a
+class PacketMap:
+    map = {"blabla": {
+        "C2S": {
+            0x00: [{"entity_id": PacketPayloads.VARINT}, {"head_yaw": PacketPayloads.BYTE}],
+            0x01: [{"entity_id": PacketPayloads.VARINT}, {"head_pitch": PacketPayloads.BYTE}]
+        }
+    }
+    }
 
-a = "0000000000000000000000100000000000000000000000001011000100111111"
+packet_id = 0
 
-def bits_to_number(bits):
-    return int(bits, 2)
+for payload in PacketMap.map["blabla"]["C2S"][packet_id]:
+    for key, value in payload.items():
+        print(value)
+        print(f"key: {key}, value: {value()}")
 
-print(a[0:26])
-print(a[26:52])
-print(a[52:])
-
-print(bits_to_number(a[0:26]))
-print(bits_to_number(a[26:52]))
-print(bits_to_number(a[52:]))
+#amazing packet idea

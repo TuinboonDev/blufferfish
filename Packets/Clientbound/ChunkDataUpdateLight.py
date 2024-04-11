@@ -1,7 +1,10 @@
-import struct
 from Packets.PacketUtil import pack_data, pack_varint
+from Util import enforce_annotations
 
-def write_single_valued_paletted_container(entry):
+import struct
+
+@enforce_annotations
+def write_single_valued_paletted_container(entry: int):
     data = b''
     data += struct.pack('b', 0) # bits per entry
     data += pack_varint(entry)
@@ -25,7 +28,8 @@ def write_data_ig():
     return data
 
 class ChunkDataUpdateLight:
-    def __init__(self, chunk_x, chunk_z, data, block_entities): #the data input is unused because I can
+    @enforce_annotations
+    def __init__(self, chunk_x: int, chunk_z: int, data, block_entities: bytes): #the data input is unused because I can
         chunk_x = chunk_x.to_bytes(4, byteorder='big', signed=True)
         chunk_z = chunk_z.to_bytes(4, byteorder='big', signed=True)
 

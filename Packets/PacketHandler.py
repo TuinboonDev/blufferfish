@@ -1,12 +1,15 @@
 from Packets.PacketUtil import pack_varint
-from Packets.PacketMap import GameStates
+from Packets.PacketMap import GameStates, GameState
+from Encryption import Encryption
+
+import socket
 import sys
 
 class Clientbound:
-    def __init__(self, socket):
+    def __init__(self, socket: socket.socket):
         self.socket = socket
 
-    def __send(self, packet, gamestate, encryption):
+    def __send(self, packet, gamestate: GameStates, encryption: Encryption):
         packet_id_map = {v: k for k, v in GameStates[gamestate.get_gamestate()]["S2C"].items()}
 
         packet_class = type(packet)
@@ -16,15 +19,14 @@ class Clientbound:
         except TypeError as e:
             raise TypeError(f"Packet {packet_class} is not in the PacketMap") from e
 
-
         for key in list(packet.__dict__.keys()):
             final_packet += packet.__dict__[key]
 
-        if packet_class.__name__ == "SyncronizePlayerPosition" or packet_class.__name__ == "SetDefaultSpawnPosition":
-            #print(len(final_packet))
-            #for x in final_packet:
-            #    print(x)
-            #print("\n")
+        if packet_class.__name__ == "SetTabListHeaderFooter":
+            print(len(final_packet))
+            for x in final_packet:
+               print(hex(x))
+            print("\n")
             pass
 
         try:
@@ -41,7 +43,7 @@ class Clientbound:
             print(f"Error while sending packet: {e}")
             return False
 
-    def send(self, packet, gamestate):
+    def send(self, packet, gamestate: GameStates):
         self.__send(packet, gamestate, None)
 
     def send_encrypted(self, packet, gamestate, encryptor):
