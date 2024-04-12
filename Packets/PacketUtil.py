@@ -2,6 +2,13 @@ from Util import enforce_annotations
 
 import struct
 
+class Packet:
+    def __init__(self, *packet_data):
+        self.packet_data = packet_data[0]
+
+    def get(self):
+        return self.packet_data
+
 class ByteBuffer:
     @enforce_annotations
     def __init__(self, bytes: bytes):
@@ -26,7 +33,7 @@ class Unpack:
             bytes_length += 1
             if not b & 0x80:
                 break
-        return d, bytes_length
+        return d
 
     def unpack_encrypted_varint(self, bytebuf, *args):
         if not args[0]:
@@ -39,16 +46,16 @@ class Unpack:
             bytes_length += 1
             if not b & 0x80:
                 break
-        return d, bytes_length
+        return d
 
     def unpack_string(self, bytebuf, *args):
-        length, length_bytes = self.unpack_varint(bytebuf)
+        length = self.unpack_varint(bytebuf)
         return bytebuf.recv(length).decode("utf-8")
 
     def unpack_encrypted_string(self, bytebuf, *args):
         if not args[0]:
             raise FileNotFoundError("Decryptor not set")
-        length, length_bytes = self.unpack_encrypted_varint(bytebuf, args[0])
+        length = self.unpack_encrypted_varint(bytebuf, args[0])
         return args[0].update(bytebuf.recv(length)).decode("utf-8")
 
     def unpack_byte(self, bytebuf, *args):
@@ -69,6 +76,22 @@ class Unpack:
         if not args[0]:
             raise FileNotFoundError("Decryptor not set")
         return struct.unpack(">h", args[0].update(bytebuf.recv(2)))[0]
+
+    def unpack_encrypted_long(self, bytebuf, *args):
+        if not args[0]:
+            raise FileNotFoundError("Decryptor not set")
+        return struct.unpack(">q", args[0].update(bytebuf.recv(8)))[0]
+
+    def unpack_encrypted_unsigned_long(self, bytebuf, *args):
+        if not args[0]:
+            raise FileNotFoundError("Decryptor not set")
+        return struct.unpack(">Q", args[0].update(bytebuf.recv(8)))[0]
+
+    def unpack_long(self, bytebuf, *args):
+        return struct.unpack(">q", bytebuf.recv(8))[0]
+
+    def unpack_unsigned_long(self, bytebuf, *args):
+        return struct.unpack(">Q", bytebuf.recv(8))[0]
 
     def unpack_encrypted_unsigned_short(self, bytebuf, *args):
         if not args[0]:
@@ -112,3 +135,7 @@ class Pack:
     def write_string(self, s: str):
         s = bytes(s, encoding="utf-8")
         return self.pack_varint(len(s)) + s
+
+    @enforce_annotations
+    def pack_long(self, d: int):
+        return struct.pack(">q", d)

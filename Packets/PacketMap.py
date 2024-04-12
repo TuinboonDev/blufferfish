@@ -1,3 +1,4 @@
+"""
 from Packets.Serverbound.StatusRequest import StatusRequest
 from Packets.Serverbound.EncryptionResponse import EncryptionResponse
 from Packets.Serverbound.PingRequest import PingRequest
@@ -24,7 +25,6 @@ from Packets.Clientbound.WorldEvent import WorldEvent
 from Packets.Clientbound.BlockUpdate import BlockUpdate
 from Packets.Clientbound.AcknowledgeBlockChange import AcknowledgeBlockChange
 from Packets.Clientbound.SetHeadRotation import SetHeadRotation
-from Packets.Clientbound.StatusResponse import StatusResponse
 from Packets.Clientbound.LoginSuccess import LoginSuccess
 from Packets.Clientbound.EncryptionRequest import EncryptionRequest
 from Packets.Clientbound.RegistryData import RegistryData
@@ -36,7 +36,6 @@ from Packets.Clientbound.SetCenterChunk import SetCenterChunk
 from Packets.Clientbound.ChunkDataUpdateLight import ChunkDataUpdateLight
 from Packets.Clientbound.GameEvent import GameEvent
 from Packets.Clientbound.KeepAlive import KeepAlive
-from Packets.Clientbound.PingResponse import PingResponse
 from Packets.Clientbound.OpenBook import OpenBook
 from Packets.Clientbound.DisplayObjective import DisplayObjective
 from Packets.Clientbound.PlayerInfoUpdate import PlayerInfoUpdate
@@ -47,9 +46,12 @@ from Packets.Clientbound.SetHeldItem import SetHeldItem
 from Packets.Clientbound.UpdateEntityPositionRotation import UpdateEntityPositionRotation
 from Packets.Clientbound.UpdateEntityRotation import UpdateEntityRotation
 from Packets.Clientbound.EntityAnimation import EntityAnimation
+"""
+from Packets.Clientbound.PingResponse import PingResponse
+from Packets.Clientbound.StatusResponse import StatusResponse
 
 from Util import enforce_annotations
-from PacketUtil import Unpack
+from Packets.PacketUtil import Unpack, Pack
 
 class GameState:
     def __init__(self):
@@ -60,47 +62,65 @@ class GameState:
         if state in GameStates:
             self.gamestate = state
         else:
+            print(GameStates)
             print(f"Error: {state} is not a valid gamestate")
 
     def get_gamestate(self):
         return self.gamestate
 
 Unpack = Unpack()
+Pack = Pack()
 
 class PacketPayloads:
-    class ENCRYPTED:
-        VARINT = Unpack.unpack_varint
-        STRING = Unpack.unpack_string
-        BYTE = Unpack.unpack_encrypted_byte
-        SHORT = Unpack.unpack_encrypted_short
-        UNSIGNED_SHORT = Unpack.unpack_unsigned_short
+    class Unpack:
+        class ENCRYPTED:
+            VARINT = Unpack.unpack_varint
+            STRING = Unpack.unpack_string
+            BYTE = Unpack.unpack_encrypted_byte
+            SHORT = Unpack.unpack_encrypted_short
+            UNSIGNED_SHORT = Unpack.unpack_unsigned_short
+            LONG = Unpack.unpack_encrypted_long
 
-    class UNENCRYPTED:
-        VARINT = Unpack.unpack_varint
-        STRING = Unpack.unpack_string
-        BYTE = Unpack.unpack_byte
-        SHORT = Unpack.unpack_short
-        UNSIGNED_SHORT = Unpack.unpack_unsigned_short
+        class UNENCRYPTED:
+            VARINT = Unpack.unpack_varint
+            STRING = Unpack.unpack_string
+            BYTE = Unpack.unpack_byte
+            SHORT = Unpack.unpack_short
+            UNSIGNED_SHORT = Unpack.unpack_unsigned_short
+            LONG = Unpack.unpack_long
+
+    class Pack:
+        VARINT = Pack.pack_varint
+        STRING = Pack.write_string
+        BYTE = 1
+        SHORT = 1
+        UNSIGNED_SHORT = 1
+        LONG = Pack.pack_long
+
+Pack = PacketPayloads.Pack
+Unpack = PacketPayloads.Unpack
 
 GameStates = {
     "HANDSHAKE": {
         "C2S": {
-            0x00: [{"protocol_version": PacketPayloads.UNENCRYPTED.VARINT}, {"server_address": PacketPayloads.UNENCRYPTED.STRING}, {"server_port": PacketPayloads.UNENCRYPTED.UNSIGNED_SHORT}, {"next_state": PacketPayloads.UNENCRYPTED.VARINT}]
+            0x00: [{"name": "Handshake"}, {"protocol_version": Unpack.ENCRYPTED.VARINT}, {"server_address": Unpack.UNENCRYPTED.STRING}, {"server_port": Unpack.UNENCRYPTED.UNSIGNED_SHORT}, {"next_state": Unpack.UNENCRYPTED.VARINT}]
         }
     },
 
     "STATUS": {
         "C2S": {
-            0x00: StatusRequest,
-            0x01: PingRequest
+            0x00: [{"name": "StatusRequest"}],
+            0x01: [{"name": "PingRequest"}, {"time": Unpack.UNENCRYPTED.LONG}]
         },
         "S2C": {
-            0x00: StatusResponse,
-            0x1: PingResponse
+            0x00: [{"class": StatusResponse}, {"response": Pack.STRING}],
+            0x1: [{"class": PingResponse}, {"time": Pack.LONG}]
         }
     },
 
-    "LOGIN": {
+
+    "LOGIN": {}}
+"""
         "C2S": {
             0x00: LoginStart,
             0x01: EncryptionResponse,
@@ -165,3 +185,4 @@ GameStates = {
         }
     }
 }
+"""

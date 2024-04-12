@@ -1,6 +1,7 @@
 from Util import enforce_annotations
+from Packets.PacketUtil import Packet
 
-class PingResponse:
+class PingResponse(Packet):
     @enforce_annotations
     def __init__(self, time: bytes):
-        self.time = time
+        return super().__init__(time)

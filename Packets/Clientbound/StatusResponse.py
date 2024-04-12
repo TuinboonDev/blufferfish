@@ -1,11 +1,13 @@
-from Packets.PacketUtil import pack_data
+from Packets.PacketUtil import Pack
 from Util import enforce_annotations
+
+from Packets.PacketUtil import Packet
 
 import json
 
-class StatusResponse:
+Pack = Pack()
+
+class StatusResponse(Packet):
     @enforce_annotations
     def __init__(self, server_data: dict):
-        server_data = bytes(json.dumps(server_data), encoding="utf-8")
-
-        self.json_data = pack_data(server_data)
+        return super().__init__(server_data)

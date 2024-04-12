@@ -1,47 +1,44 @@
-from Packets.PacketUtil import pack_varint
+from Packets.PacketUtil import Pack
 from Packets.PacketMap import GameStates, GameState
 from Encryption import Encryption
 
 import socket
 import sys
 
+Pack = Pack()
+
+
 class Clientbound:
     def __init__(self, socket: socket.socket):
         self.socket = socket
 
-    def __send(self, packet, gamestate: GameStates, encryption: Encryption):
-        packet_id_map = {v: k for k, v in GameStates[gamestate.get_gamestate()]["S2C"].items()}
+    def __send(self, packet, gamestate, encryptor):
+        print(packet)
+        #packet_id_map = {v: k for k, v in GameStates[gamestate.get_gamestate()]["S2C"].items()}
+        for p in list(GameStates[gamestate.get_gamestate()]["S2C"].values()):
+            if p[0]["class"] == type(packet):
+                p.pop(0)
+                packet_sequence = p
+                break
 
-        packet_class = type(packet)
+        final_packet = b''
 
-        try:
-            final_packet = pack_varint(packet_id_map.get(packet_class))
-        except TypeError as e:
-            raise TypeError(f"Packet {packet_class} is not in the PacketMap") from e
+        for x in range(len(packet.get())):
+            method = list(packet_sequence[x].values())[x]
+            input = list(packet.__dict__.values())[x]
+            print(input)
+            print(method)
+            print(method(input))
+            final_packet += method(input)
+            break
 
-        for key in list(packet.__dict__.keys()):
-            final_packet += packet.__dict__[key]
+        print("\n\n")
+        print(final_packet)
 
-        if packet_class.__name__ == "SetTabListHeaderFooter":
-            print(len(final_packet))
-            for x in final_packet:
-               print(hex(x))
-            print("\n")
-            pass
-
-        try:
-            if encryption is not None:
-                self.socket.send(encryption.update(pack_varint(len(final_packet)) + final_packet))
-            else:
-                self.socket.send(pack_varint(len(final_packet)) + final_packet)
-            return True
-        except ConnectionAbortedError as e:
-            #TODO: add custom client disconnect error
-            print("Client disconnected, shutting down keepalive thread")
-            sys.exit()
-        except Exception as e:
-            print(f"Error while sending packet: {e}")
-            return False
+        if encryptor is not None:
+            self.socket.send(encryptor.update(Pack.pack_varint(len(final_packet)) + final_packet))
+        else:
+            self.socket.send(Pack.pack_varint(len(final_packet)) + final_packet)
 
     def send(self, packet, gamestate):
         self.__send(packet, gamestate, None)
@@ -57,12 +54,14 @@ class Serverbound:
         if packet_id not in GameStates[game_state]["C2S"]:
             raise ValueError(f"Packet ID {packet_id} is not in the PacketMap")
 
-        packet_data = {}
+        packet_data = {"name": GameStates[game_state]["C2S"][packet_id][0]["name"]}
 
         for payload in GameStates[game_state]["C2S"][packet_id]:
             for key, value in payload.items():
-                if list(payload.keys())[0] == "encrypted":
+                if list(payload.keys())[0] == "encrypted" or list(payload.keys())[0] == "name":
                     continue
                 packet_data[key] = value(bytebuf, decryptor)
+
+        print(packet_data)
 
         return packet_data

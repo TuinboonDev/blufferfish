@@ -10,50 +10,12 @@ import requests
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from hashlib import sha1
 
-from Packets.Serverbound.StatusRequest import StatusRequest
 from Packets.Serverbound.PingRequest import PingRequest
-from Packets.Serverbound.LoginStart import LoginStart
-from Packets.Serverbound.Handshake import Handshake
-from Packets.Serverbound.EncryptionResponse import EncryptionResponse
-from Packets.Serverbound.LoginAcknowledged import LoginAcknowledged
-from Packets.Serverbound.ServerboundPluginMessage import ServerboundPluginMessage
-from Packets.Serverbound.AcknowledgeFinishConfiguration import AcknowledgeFinishConfiguration
-from Packets.Serverbound.ConfirmTeleportation import ConfirmTeleportation
-from Packets.Serverbound.ClientInformation import ClientInformation
-from Packets.Serverbound.SetPlayerPosition import SetPlayerPosition
-from Packets.Serverbound.SetPlayerPositionRotation import SetPlayerPositionRotation
-from Packets.Serverbound.SetPlayerRotation import SetPlayerRotation
-from Packets.Serverbound.PlayerSession import PlayerSession
-from Packets.Serverbound.SwingArm import SwingArm
-from Packets.Serverbound.PlayerCommand import PlayerCommand
-from Packets.Serverbound.PlayerAction import PlayerAction
-
-from Packets.Clientbound.SetTabListHeaderFooter import SetTabListHeaderFooter
-from Packets.Clientbound.WorldEvent import WorldEvent
-from Packets.Clientbound.BlockUpdate import BlockUpdate
-from Packets.Clientbound.SetHeadRotation import SetHeadRotation
-from Packets.Clientbound.EntityAnimation import EntityAnimation
+from Packets.Serverbound.StatusRequest import StatusRequest
 from Packets.Clientbound.PingResponse import PingResponse
 from Packets.Clientbound.StatusResponse import StatusResponse
-from Packets.Clientbound.EncryptionRequest import EncryptionRequest
-from Packets.Clientbound.LoginSuccess import LoginSuccess
-from Packets.Clientbound.RegistryData import RegistryData
-from Packets.Clientbound.ConfigurationFinish import ConfigurationFinish
-from Packets.Clientbound.LoginPlay import LoginPlay
-from Packets.Clientbound.SynchronizePlayerPosition import SyncronizePlayerPosition
-from Packets.Clientbound.SetDefaultSpawnPosition import SetDefaultSpawnPosition
-from Packets.Clientbound.SetCenterChunk import SetCenterChunk
-from Packets.Clientbound.ChunkDataUpdateLight import ChunkDataUpdateLight
-from Packets.Clientbound.GameEvent import GameEvent
-from Packets.Clientbound.KeepAlive import KeepAlive
-from Packets.Clientbound.SetEntityMetadata import SetEntityMetadata
-from Packets.Clientbound.PlayerInfoUpdate import PlayerInfoUpdate
-from Packets.Clientbound.SpawnEntity import SpawnEntity
-from Packets.Clientbound.UpdateEntityPosition import UpdateEntityPosition
-from Packets.Clientbound.SetHeldItem import SetHeldItem
-from Packets.Clientbound.UpdateEntityPositionRotation import UpdateEntityPositionRotation
-from Packets.Clientbound.UpdateEntityRotation import UpdateEntityRotation
-from Packets.Clientbound.AcknowledgeBlockChange import AcknowledgeBlockChange
+
+from Packets.Serverbound.Handshake import Handshake
 
 from Packets.PacketHandler import Clientbound, Serverbound
 from Packets.ServerData import ServerData
@@ -91,12 +53,10 @@ def main():
 
     print("Listening on port", PORT)
 
-
-
     @enforce_annotations
     def get_packet(serverbound: Serverbound, socket: socket.socket, gamestate: GameState):
         try:
-            packet_length, byte_length = Unpack.unpack_varint(socket)
+            packet_length = Unpack.unpack_varint(socket)
         except TypeError:
             ClientError("Client disconnected")
             networking.remove_client(socket)
@@ -105,13 +65,13 @@ def main():
 
         buf = ByteBuffer(socket.recv(packet_length))
 
-        packet_id, byte_length = buf.unpack_varint()
+        packet_id = Unpack.unpack_varint(buf)
         return serverbound.receive(buf, packet_id, gamestate, None)
 
     @enforce_annotations
     def get_encrypted_packet(serverbound: Serverbound, socket: socket.socket, gamestate: GameState, decryptor):
         try:
-            packet_length, byte_length = Unpack.unpack_encrypted_varint(socket, decryptor)
+            packet_length = Unpack.unpack_encrypted_varint(socket, decryptor)
         except TypeError:
             #TODO: add custom client disconnect error
             ClientError("Client disconnected")
@@ -121,7 +81,7 @@ def main():
 
         buf = ByteBuffer(socket.recv(packet_length))
 
-        packet_id, byte_length = buf.unpack_encrypted_varint(decryptor)
+        packet_id = Unpack.unpack_encrypted_varint(buf, decryptor)
         return serverbound.receive(buf, packet_id, gamestate, decryptor)
 
     @enforce_annotations
@@ -135,8 +95,9 @@ def main():
 
         if gamestate.get_gamestate() == "HANDSHAKE":
             packet = get_packet(serverbound, client_socket, gamestate)
+            print(packet.get("next_state"))
 
-            if isinstance(packet, Handshake):
+            if packet.get("name") == "Handshake":
                 if packet.get("next_state") == 1:
                     gamestate.set_gamestate("STATUS")
                 elif packet.get("next_state") == 2:
@@ -145,7 +106,7 @@ def main():
         if gamestate.get_gamestate() == "STATUS":
             packet = get_packet(serverbound, client_socket, gamestate)
 
-            if isinstance(packet, StatusRequest):
+            if packet.get("name") == "StatusRequest":
                 sample = [
                     {"name": "BlufferFish", "id": "d552a0a7-b211-47c1-9396-5f39dcfedc73"},
                     {"name": "Tuinboon", "id": "d552a0a7-b211-47c1-9396-5f39dcfedc73"}
@@ -163,18 +124,21 @@ def main():
                     True
                 )
 
-                SLP_packet = StatusResponse(server_data.get_data())
+                SLP_packet = StatusResponse(str(server_data.get_data()))
+
+                print(SLP_packet)
 
                 clientbound.send(SLP_packet, gamestate)
 
 
             packet = get_packet(serverbound, client_socket, gamestate)
 
-            if isinstance(packet, PingRequest):
+            print(packet.get("name"))
+            if packet.get("name") == "PingRequest":
                 ping_response = PingResponse(packet.get("time"))
                 clientbound.send(ping_response, gamestate)
                 print("Sent ping packet")
-
+    """
         if gamestate.get_gamestate() == "LOGIN":
             packet = get_packet(serverbound, client_socket, gamestate)
 
@@ -573,6 +537,7 @@ def main():
                 #networking.broadcast(set_tablist_header_footer, gamestate)s
 
             threading.Thread(target=updateTab).start()
+    """
 
 
     networking = Networking()
