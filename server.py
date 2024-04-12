@@ -566,7 +566,7 @@ def main():
             def updateTab():
                 set_tablist_header_footer = SetTabListHeaderFooter("H", "A")
 
-                networking.broadcast(set_tablist_header_footer, gamestate)
+                #networking.broadcast(set_tablist_header_footer, gamestate)
 
             threading.Thread(target=updateTab).start()
 
