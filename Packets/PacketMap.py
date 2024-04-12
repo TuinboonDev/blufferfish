@@ -49,6 +49,7 @@ from Packets.Clientbound.UpdateEntityRotation import UpdateEntityRotation
 from Packets.Clientbound.EntityAnimation import EntityAnimation
 
 from Util import enforce_annotations
+from PacketUtil import Unpack
 
 class GameState:
     def __init__(self):
@@ -64,10 +65,27 @@ class GameState:
     def get_gamestate(self):
         return self.gamestate
 
+Unpack = Unpack()
+
+class PacketPayloads:
+    class ENCRYPTED:
+        VARINT = Unpack.unpack_varint
+        STRING = Unpack.unpack_string
+        BYTE = Unpack.unpack_encrypted_byte
+        SHORT = Unpack.unpack_encrypted_short
+        UNSIGNED_SHORT = Unpack.unpack_unsigned_short
+
+    class UNENCRYPTED:
+        VARINT = Unpack.unpack_varint
+        STRING = Unpack.unpack_string
+        BYTE = Unpack.unpack_byte
+        SHORT = Unpack.unpack_short
+        UNSIGNED_SHORT = Unpack.unpack_unsigned_short
+
 GameStates = {
     "HANDSHAKE": {
         "C2S": {
-            0x00: Handshake
+            0x00: [{"protocol_version": PacketPayloads.UNENCRYPTED.VARINT}, {"server_address": PacketPayloads.UNENCRYPTED.STRING}, {"server_port": PacketPayloads.UNENCRYPTED.UNSIGNED_SHORT}, {"next_state": PacketPayloads.UNENCRYPTED.VARINT}]
         }
     },
 

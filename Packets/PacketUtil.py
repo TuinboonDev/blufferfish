@@ -16,42 +16,69 @@ class ByteBuffer:
         self.buffer = self.buffer[length:]
         return data
 
-    def unpack_varint(self):
+class Unpack:
+    def unpack_varint(self, bytebuf, *args):
         d = 0
         bytes_length = 0
         for i in range(5):
-            b = ord(self.recv(1))
+            b = ord(bytebuf.recv(1))
             d |= (b & 0x7F) << 7*bytes_length
             bytes_length += 1
             if not b & 0x80:
                 break
         return d, bytes_length
 
-    def unpack_encrypted_varint(self, decryptor):
-        if not decryptor:
+    def unpack_encrypted_varint(self, bytebuf, *args):
+        if not args[0]:
             raise FileNotFoundError("Decryptor not set")
         d = 0
         bytes_length = 0
         for i in range(5):
-            b = ord(decryptor.update(self.recv(1)))
+            b = ord(args[0].update(bytebuf.recv(1)))
             d |= (b & 0x7F) << 7*bytes_length
             bytes_length += 1
             if not b & 0x80:
                 break
         return d, bytes_length
 
-    def unpack_string(self, buf):
-        length, length_bytes = self.unpack_varint()
-        return buf.recv(length).decode("utf-8")
+    def unpack_string(self, bytebuf, *args):
+        length, length_bytes = self.unpack_varint(bytebuf)
+        return bytebuf.recv(length).decode("utf-8")
 
-    def unpack_encrypted_string(self, decryptor):
-        if not decryptor:
+    def unpack_encrypted_string(self, bytebuf, *args):
+        if not args[0]:
             raise FileNotFoundError("Decryptor not set")
-        length, length_bytes = self.unpack_encrypted_varint(decryptor)
-        return decryptor.update(self.recv(length)).decode("utf-8")
+        length, length_bytes = self.unpack_encrypted_varint(bytebuf, args[0])
+        return args[0].update(bytebuf.recv(length)).decode("utf-8")
 
-    def decrypt_byte(self, b, decryptor):
-        return decryptor.update(b)
+    def unpack_byte(self, bytebuf, *args):
+        return bytebuf.recv(1)
+
+    def unpack_encrypted_byte(self, bytebuf, *args):
+        if not args[0]:
+            raise FileNotFoundError("Decryptor not set")
+        return args[0].update(bytebuf.recv(1))
+
+    def unpack_short(self, bytebuf, *args):
+        return struct.unpack(">h", bytebuf.recv(2))[0]
+
+    def unpack_unsigned_short(self, bytebuf, *args):
+        return struct.unpack(">H", bytebuf.recv(2))[0]
+
+    def unpack_encrypted_short(self, bytebuf, *args):
+        if not args[0]:
+            raise FileNotFoundError("Decryptor not set")
+        return struct.unpack(">h", args[0].update(bytebuf.recv(2)))[0]
+
+    def unpack_encrypted_unsigned_short(self, bytebuf, *args):
+        if not args[0]:
+            raise FileNotFoundError("Decryptor not set")
+        return struct.unpack(">H", args[0].update(bytebuf.recv(2)))[0]
+
+    def decrypt_byte(self, b, *args):
+        if not args[0]:
+            raise FileNotFoundError("Decryptor not set")
+        return args[0].update(b)
 
     @enforce_annotations
     def unpack_varint_bytes(self, byte_string: bytes):
@@ -65,48 +92,23 @@ class ByteBuffer:
                 break
         return result
 
-@enforce_annotations
-def pack_varint(d: int):
-    o = b""
-    while True:
-        b = d & 0x7F
-        d >>= 7
-        o += struct.pack("B", b | (0x80 if d > 0 else 0))
-        if d == 0:
-            break
-    return o
+class Pack:
+    @enforce_annotations
+    def pack_varint(self, d: int):
+        o = b""
+        while True:
+            b = d & 0x7F
+            d >>= 7
+            o += struct.pack("B", b | (0x80 if d > 0 else 0))
+            if d == 0:
+                break
+        return o
 
-@enforce_annotations
-def pack_data(d: bytes):
-    return pack_varint(len(d)) + d
+    @enforce_annotations
+    def pack_data(self, d: bytes):
+        return self.pack_varint(len(d)) + d
 
-@enforce_annotations
-def write_string(s: str):
-    s = bytes(s, encoding="utf-8")
-    return pack_varint(len(s)) + s
-
-@enforce_annotations
-def unpack_varint(buf: ByteBuffer):
-    d = 0
-    bytes_length = 0
-    for i in range(5):
-        b = ord(buf.recv(1))
-        d |= (b & 0x7F) << 7*bytes_length
-        bytes_length += 1
-        if not b & 0x80:
-            break
-    return d, bytes_length
-
-@enforce_annotations
-def unpack_encrypted_varint(buf: ByteBuffer, decryptor):
-    if not decryptor:
-        raise FileNotFoundError("Decryptor not set")
-    d = 0
-    bytes_length = 0
-    for i in range(5):
-        b = ord(decryptor.update(buf.recv(1)))
-        d |= (b & 0x7F) << 7*bytes_length
-        bytes_length += 1
-        if not b & 0x80:
-            break
-    return d, bytes_length
+    @enforce_annotations
+    def write_string(self, s: str):
+        s = bytes(s, encoding="utf-8")
+        return self.pack_varint(len(s)) + s

@@ -58,7 +58,7 @@ from Packets.Clientbound.AcknowledgeBlockChange import AcknowledgeBlockChange
 from Packets.PacketHandler import Clientbound, Serverbound
 from Packets.ServerData import ServerData
 from Packets.PacketMap import GameState
-from Packets.PacketUtil import ByteBuffer, unpack_varint, unpack_encrypted_varint
+from Packets.PacketUtil import ByteBuffer, Unpack
 
 from Encryption import Encryption
 from Networking import Networking
@@ -72,6 +72,8 @@ print("""
 \u001b[36m ) _ < )(__  )(__)(  )__)  )__)  )__)  )   /   \u001b[33;1m)__)  _)(_ \__ \ ) _ ( 
 \u001b[36m(____/(____)(______)(__)  (__)  (____)(_)\_)  \u001b[33;1m(__)  (____)(___/(_) (_)
                                                                                             \033[0m""")
+
+Unpack = Unpack()
 
 def main():
     # Define the port to listen on
@@ -89,10 +91,12 @@ def main():
 
     print("Listening on port", PORT)
 
+
+
     @enforce_annotations
     def get_packet(serverbound: Serverbound, socket: socket.socket, gamestate: GameState):
         try:
-            packet_length, byte_length = unpack_varint(socket)
+            packet_length, byte_length = Unpack.unpack_varint(socket)
         except TypeError:
             ClientError("Client disconnected")
             networking.remove_client(socket)
@@ -107,7 +111,7 @@ def main():
     @enforce_annotations
     def get_encrypted_packet(serverbound: Serverbound, socket: socket.socket, gamestate: GameState, decryptor):
         try:
-            packet_length, byte_length = unpack_encrypted_varint(socket, decryptor)
+            packet_length, byte_length = Unpack.unpack_encrypted_varint(socket, decryptor)
         except TypeError:
             #TODO: add custom client disconnect error
             ClientError("Client disconnected")
@@ -566,7 +570,7 @@ def main():
             def updateTab():
                 set_tablist_header_footer = SetTabListHeaderFooter("H", "A")
 
-                #networking.broadcast(set_tablist_header_footer, gamestate)
+                #networking.broadcast(set_tablist_header_footer, gamestate)s
 
             threading.Thread(target=updateTab).start()
 

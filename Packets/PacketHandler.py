@@ -43,7 +43,7 @@ class Clientbound:
             print(f"Error while sending packet: {e}")
             return False
 
-    def send(self, packet, gamestate: GameStates):
+    def send(self, packet, gamestate):
         self.__send(packet, gamestate, None)
 
     def send_encrypted(self, packet, gamestate, encryptor):
@@ -54,11 +54,15 @@ class Serverbound:
         #Is this if statement reliable?
 
         game_state = gamestate.get_gamestate()
-        if game_state not in GameStates or "C2S" not in GameStates[game_state] or packet_id not in GameStates[game_state]["C2S"]:
-            #Packets like 0x17 == 23 are not in the PacketMap because the game_state is not in the right state yet
+        if packet_id not in GameStates[game_state]["C2S"]:
             raise ValueError(f"Packet ID {packet_id} is not in the PacketMap")
 
+        packet_data = {}
 
-        packet = GameStates[game_state]["C2S"][packet_id]().create(bytebuf, decryptor)
+        for payload in GameStates[game_state]["C2S"][packet_id]:
+            for key, value in payload.items():
+                if list(payload.keys())[0] == "encrypted":
+                    continue
+                packet_data[key] = value(bytebuf, decryptor)
 
-        return packet
+        return packet_data
