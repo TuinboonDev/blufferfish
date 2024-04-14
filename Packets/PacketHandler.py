@@ -37,14 +37,18 @@ class Clientbound:
                 final_packet += method(input)
             except Exception as e:
                 print("\n")
-                print(list(packet_sequence))
+                print(method)
+                print(input)
+                print(packet.get())
+                print(packet_sequence)
+
 
         if encryptor is not None:
             self.socket.send(encryptor.update(Pack.pack_varint(len(final_packet)) + final_packet))
         else:
             self.socket.send(Pack.pack_varint(len(final_packet)) + final_packet)
 
-        if packet.__class__.__name__ == "RegistryData":
+        if packet.__class__.__name__ == "SynchronizePlayerPosition":
             print(Pack.pack_varint(len(final_packet)) + final_packet)
 
     def send(self, packet, gamestate):

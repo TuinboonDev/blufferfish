@@ -1,12 +1,11 @@
+from Packets.PacketUtil import Pack
 from Util import enforce_annotations
 
-import struct
+from Packets.PacketUtil import Packet
 
-class GameEvent:
+Pack = Pack()
+
+class GameEvent(Packet):
     @enforce_annotations
     def __init__(self, event: int, value: int):
-        event = struct.pack('>B', event)
-        value = struct.pack('f', value)
-
-        self.event = event
-        self.value = value
+        return super().__init__(event, value)

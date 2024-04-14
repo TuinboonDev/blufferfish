@@ -1,7 +1,11 @@
-from Packets.PacketUtil import pack_varint
+from Packets.PacketUtil import Pack
+from Util import enforce_annotations
 
-class AcknowledgeBlockChange:
+from Packets.PacketUtil import Packet
+
+Pack = Pack()
+
+class AcknowledgeBlockChange(Packet):
+    @enforce_annotations
     def __init__(self, sequence_id):
-        sequence_id = pack_varint(sequence_id)
-
-        self.sequence_id = sequence_id
+        return super().__init__(sequence_id)

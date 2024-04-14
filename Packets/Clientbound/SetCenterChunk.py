@@ -1,12 +1,11 @@
-from Packets.PacketUtil import pack_varint
+from Packets.PacketUtil import Pack
 from Util import enforce_annotations
 
-class SetCenterChunk:
+from Packets.PacketUtil import Packet
+
+Pack = Pack()
+
+class SetCenterChunk(Packet):
     @enforce_annotations
-    def __init__(self, x: int, z: int):
-        x = pack_varint(x)
-        z = pack_varint(z)
-
-
-        self.x = x
-        self.z = z
+    def __init__(self, x: int, y: int):
+        return super().__init__(x, y)

@@ -1,10 +1,11 @@
+from Packets.PacketUtil import Pack
 from Util import enforce_annotations
 
-import struct
+from Packets.PacketUtil import Packet
 
-class KeepAlive:
+Pack = Pack()
+
+class KeepAlive(Packet):
     @enforce_annotations
     def __init__(self, keep_alive_id: int):
-        keep_alive_id = struct.pack('>q', keep_alive_id)
-
-        self.keep_alive_id = keep_alive_id
+        return super().__init__(keep_alive_id)

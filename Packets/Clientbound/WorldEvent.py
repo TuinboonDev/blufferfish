@@ -1,12 +1,11 @@
-import struct
+from Packets.PacketUtil import Pack
+from Util import enforce_annotations
 
-class WorldEvent:
+from Packets.PacketUtil import Packet
+
+Pack = Pack()
+
+class WorldEvent(Packet):
+    @enforce_annotations
     def __init__(self, event_id, location, data, disable_relative_volume):
-        event_id = struct.pack(">I", event_id)
-        data = struct.pack(">I", data)
-        disable_relative_volume = int(disable_relative_volume).to_bytes(1, byteorder="big")
-
-        self.event_id = event_id
-        self.location = location
-        self.data = data
-        self.disable_relative_volume = disable_relative_volume
+        return super().__init__(event_id, location, data, disable_relative_volume)

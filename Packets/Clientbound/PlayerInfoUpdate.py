@@ -1,10 +1,18 @@
-from Packets.PacketUtil import pack_varint, write_string
+from Packets.PacketUtil import Pack
 from Util import enforce_annotations
 
-class PlayerInfoUpdate:
+from Packets.PacketUtil import Packet
+
+Pack = Pack()
+
+#TODO:
+#TODO:
+#TODO:
+
+class PlayerInfoUpdate(Packet):
     @enforce_annotations
     def __init__(self, actions: list, player_actions: list, properties: dict):
-        number_of_players = pack_varint(len(player_actions))
+        number_of_players = Pack.pack_varint(len(player_actions))
 
         players_field = b''
 
@@ -12,12 +20,12 @@ class PlayerInfoUpdate:
             if action == 0x01:
                 for player in player_actions:
                     players_field += player["uuid"]
-                    players_field += write_string(player["name"])
-                    players_field += pack_varint(1)
-                    players_field += write_string(properties["name"])
-                    players_field += write_string(properties["value"])
+                    players_field += Pack.write_string(player["name"])
+                    players_field += Pack.pack_varint(1)
+                    players_field += Pack.write_string(properties["name"])
+                    players_field += Pack.write_string(properties["value"])
                     players_field += int(properties["is_signed"]).to_bytes(1, byteorder='big', signed=True)
-                    players_field += write_string(properties["signature"])
+                    players_field += Pack.write_string(properties["signature"])
                     break
 
             if action == 0x08:
@@ -27,6 +35,6 @@ class PlayerInfoUpdate:
 
         actions = actions.to_bytes(1, byteorder='big', signed=True)
 
-        self.actions = actions
-        self.number_of_players = number_of_players
-        self.players_field = players_field
+        packet = actions + player_actions + properties
+
+        return super().__init__(packet)

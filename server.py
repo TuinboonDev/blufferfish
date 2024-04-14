@@ -19,6 +19,25 @@ from Packets.Clientbound.EncryptionRequest import EncryptionRequest
 from Packets.Clientbound.LoginSuccess import LoginSuccess
 from Packets.Clientbound.RegistryData import RegistryData
 from Packets.Clientbound.ConfigurationFinish import ConfigurationFinish
+from Packets.Clientbound.SetHeldItem import SetHeldItem
+from Packets.Clientbound.LoginPlay import LoginPlay
+from Packets.Clientbound.SynchronizePlayerPosition import SynchronizePlayerPosition
+from Packets.Clientbound.SetDefaultSpawnPosition import SetDefaultSpawnPosition
+from Packets.Clientbound.GameEvent import GameEvent
+from Packets.Clientbound.SetCenterChunk import SetCenterChunk
+from Packets.Clientbound.UpdateEntityPosition import UpdateEntityPosition
+from Packets.Clientbound.UpdateEntityRotation import UpdateEntityRotation
+from Packets.Clientbound.KeepAlive import KeepAlive
+from Packets.Clientbound.ChunkDataUpdateLight import ChunkDataUpdateLight
+from Packets.Clientbound.PlayerInfoUpdate import PlayerInfoUpdate
+from Packets.Clientbound.SpawnEntity import SpawnEntity
+from Packets.Clientbound.SetEntityMetadata import SetEntityMetadata
+from Packets.Clientbound.SetHeadRotation import SetHeadRotation
+from Packets.Clientbound.UpdateEntityPositionRotation import UpdateEntityPositionRotation
+from Packets.Clientbound.EntityAnimation import EntityAnimation
+from Packets.Clientbound.AcknowledgeBlockChange import AcknowledgeBlockChange
+from Packets.Clientbound.BlockUpdate import BlockUpdate
+from Packets.Clientbound.WorldEvent import WorldEvent
 
 from Packets.Serverbound.Handshake import Handshake
 
@@ -123,7 +142,7 @@ def main():
                     5,
                     -5,
                     sample,
-                    "\u00A73Bluffer\u00A7eFish",
+                    "BlufferFish",#\u00A73Bluffer\u00A7eFish
                     "icon.png",
                     False,
                     True
@@ -254,24 +273,22 @@ def main():
 
             login_play = LoginPlay(
                 entity_id,
-                False,
+                b'\x00',
                 b'',
                 5,
                 12,
                 6,
-                False,
-                True,
-                False,
+                b'\x00',
+                b'\x01',
+                b'\x00',
                 "minecraft:overworld",
                 "minecraft:overworld",
                 123456,
                 "creative",
-                None,
-                False,
-                True,
-                False,
-                None,
-                None,
+                b'\x00',
+                b'\x00',
+                b'\x01',
+                b'\x00',
                 0
             )
 
@@ -283,6 +300,8 @@ def main():
 
             clientbound.send_encrypted(set_held_item, gamestate, encryptor)
 
+            print("Held item")
+
             # ----
 
             position = general_player_handler.get_position(entity_id)
@@ -290,9 +309,11 @@ def main():
 
             teleport_id = 123
 
-            sync_player_pos = SyncronizePlayerPosition(position[0], position[1], position[2], rotation[0], rotation[1], b'\x00', teleport_id)
+            sync_player_pos = SynchronizePlayerPosition(position[0], position[1], position[2], rotation[0], rotation[1], b'\x00', teleport_id)
 
             clientbound.send_encrypted(sync_player_pos, gamestate, encryptor)
+
+            print("Sync player pos")
 
             # Set default spawn pos
 
@@ -300,11 +321,15 @@ def main():
 
             clientbound.send_encrypted(set_default_spawn_pos, gamestate, encryptor)
 
+            print("Set default spawn pos")
+
             # Game event packet
 
             game_event = GameEvent(13, 0)
 
             clientbound.send_encrypted(game_event, gamestate, encryptor)
+
+            print("Game event")
 
             # Center chunk
 
@@ -335,7 +360,7 @@ def main():
             # tp confirm
             packet = get_encrypted_packet(serverbound, client_socket, gamestate, decryptor)
 
-            if isinstance(packet, ConfirmTeleportation):
+            if packet.get("packet_name") == "ConfirmTeleportation":
                 if packet.get("teleport_id") == teleport_id:
                     print("Teleportation confirmed")
 
@@ -402,10 +427,10 @@ def main():
                     prevZ = position[2]
 
                     packet = get_encrypted_packet(serverbound, client_socket, gamestate, decryptor)
-                    if isinstance(packet, PlayerSession):
+                    if packet.get("packet_name") == "PlayerSession":
                         print("Player Session")
 
-                    elif isinstance(packet, SetPlayerPosition):
+                    elif packet.get("packet_name") == "SetPlayerPosition":
                         on_ground = packet.get("on_ground")
                         currentX = struct.unpack('>d', packet.get("x"))[0]
                         currentY = struct.unpack('>d', packet.get("y"))[0]
@@ -421,7 +446,7 @@ def main():
 
                         networking.send_to_others(update_entity_position, client_socket, gamestate)
 
-                    elif isinstance(packet, SetPlayerPositionRotation):
+                    elif packet.get("packet_name") == "SetPlayerPositionRotation":
                         on_ground = packet.get("on_ground")
                         currentX = struct.unpack('>d', packet.get("x"))[0]
                         currentY = struct.unpack('>d', packet.get("y"))[0]
@@ -454,7 +479,7 @@ def main():
 
                         networking.send_to_others(set_head_rotation, client_socket, gamestate)
 
-                    elif isinstance(packet, SetPlayerRotation):
+                    elif packet.get("packet_name") == "SetPlayerRotation":
                         on_ground = packet.get("on_ground")
                         yaw = packet.get("yaw")
                         pitch = packet.get("pitch")
@@ -477,7 +502,7 @@ def main():
                         set_head_rotation = SetHeadRotation(entity_id, yaw)
 
                         networking.send_to_others(set_head_rotation, client_socket, gamestate)
-                    elif isinstance(packet, SwingArm):
+                    elif packet.get("packet_name") == "SwingArm":
                         hand = packet.get("hand")
 
                         if hand == 0:
@@ -489,7 +514,7 @@ def main():
                         entity_animation = EntityAnimation(entity_id, animation)
 
                         networking.send_to_others(entity_animation, client_socket, gamestate)
-                    elif isinstance(packet, PlayerCommand):
+                    elif packet.get("packet_name") == "PlayerCommand":
                         action_id = packet.get("action_id")
 
                         bit_mask = 0
@@ -515,7 +540,7 @@ def main():
                         set_entity_metadata = SetEntityMetadata(packet.get("entity_id"), entries)
 
                         networking.send_to_others(set_entity_metadata, client_socket, gamestate)
-                    elif isinstance(packet, PlayerAction):
+                    elif packet.get("packet_name") == "PlayerAction":
                         acknowledge_block_change = AcknowledgeBlockChange(packet.get("sequence_id"))
 
                         clientbound.send(acknowledge_block_change, gamestate)
@@ -533,7 +558,8 @@ def main():
             threading.Thread(target=keepListening).start()
 
             def updateTab():
-                set_tablist_header_footer = SetTabListHeaderFooter("H", "A")
+                pass
+                #set_tablist_header_footer = SetTabListHeaderFooter("H", "A")
 
                 #networking.broadcast(set_tablist_header_footer, gamestate)s
 

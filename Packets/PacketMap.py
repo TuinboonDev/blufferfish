@@ -83,6 +83,9 @@ class PacketPayloads:
             UUID = Unpack.unpack_encrypted_uuid
             DATA = Unpack.unpack_encrypted_data
             REMAINING = Unpack.unpack_encrypted_remaining
+            LOCATION = Unpack.unpack_encrypted_location
+            FLOAT = Unpack.unpack_encrypted_float
+            DOUBLE = Unpack.unpack_encrypted_double
 
         class UNENCRYPTED:
             VARINT = Unpack.unpack_varint
@@ -102,6 +105,13 @@ class PacketPayloads:
         UNSIGNED_SHORT = 1
         LONG = Pack.pack_long
         DATA = Pack.pack_data
+        INT = Pack.pack_int
+        LOCATION = Pack.pack_location
+        ANGLE = Pack.pack_angle
+        DOUBLE = Pack.pack_double
+        PLAYERS = Pack.pack_players
+        GAMEMODE = Pack.pack_gamemode
+        FLOAT = Pack.pack_float
 
 Pack = PacketPayloads.Pack
 Unpack = PacketPayloads.Unpack
@@ -151,42 +161,50 @@ GameStates = {
 
     "PLAY": {
         "C2S": {
-            0x21: PlayerAction,
-            0x10: ServerboundPluginMessage,
-            0x20: PlayerAbilities,
-            0x33: SwingArm,
-            0x22: PlayerCommand,
-            0x15: ServerboundKeepAlive,
-            0x19: SetPlayerRotation,
-            0x1A: SetPlayerOnGround,
-            0x06: PlayerSession,
-            0x18: SetPlayerPositionRotation,
-            0x17: SetPlayerPosition,
-            0x00: ConfirmTeleportation
+            0x21: {"PlayerAction": [{"status": Unpack.ENCRYPTED.VARINT}, {"location": Unpack.ENCRYPTED.LOCATION}, {"face": Pack.BYTE}, {"sequence": Pack.VARINT}]},
+            0x10: {"ServerboundPluginMessage": [{"channel": Unpack.ENCRYPTED.STRING}, {"data": Unpack.ENCRYPTED.REMAINING}]},
+            0x20: {"PlayerAbilities": [{"flags": Unpack.ENCRYPTED.BYTE}]},
+            0x33: {"SwingArm": [{"hand": Unpack.ENCRYPTED.VARINT}]},
+            0x22: {"PlayerCommand": [{"entity_id": Unpack.ENCRYPTED.VARINT}, {"action_id": Unpack.ENCRYPTED.VARINT}, {"jump_boost": Unpack.ENCRYPTED.VARINT}]},
+            0x15: {"ServerboundKeepAlive": [{"keep_alive_id": Unpack.ENCRYPTED.LONG}]},
+            0x19: {"SetPlayerRotation": [{"yaw": Unpack.ENCRYPTED.FLOAT}, {"pitch": Unpack.ENCRYPTED.FLOAT}, {"on_ground": Unpack.ENCRYPTED.BYTE}]},
+            0x1A: {"SetPlayerOnGround": [{"on_ground": Unpack.ENCRYPTED.BYTE}]},
+            0x06: {"PlayerSession": [{"session_id": Unpack.ENCRYPTED.UUID}, {"expires_at": Unpack.ENCRYPTED.LONG}, {"public_key": Unpack.ENCRYPTED.DATA}, {"key_signature": Unpack.ENCRYPTED.DATA}]},
+            0x18: {"SetPlayerPositionRotation": [{"x": Unpack.ENCRYPTED.DOUBLE}, {"y": Unpack.ENCRYPTED.DOUBLE}, {"z": Unpack.ENCRYPTED.DOUBLE}, {"yaw": Unpack.ENCRYPTED.FLOAT}, {"pitch": Unpack.ENCRYPTED.FLOAT}, {"on_ground": Unpack.ENCRYPTED.BYTE}]},
+            0x17: {"SetPlayerPosition": [{"x": Unpack.ENCRYPTED.DOUBLE}, {"y": Unpack.ENCRYPTED.DOUBLE}, {"z": Unpack.ENCRYPTED.DOUBLE}, {"on_ground": Unpack.ENCRYPTED.BYTE}]},
+            0x00: {"ConfirmTeleportation": [{"teleport_id": Unpack.ENCRYPTED.VARINT}]},
         },
+
         "S2C": {
-            0x6A: SetTabListHeaderFooter,
-            0x26: WorldEvent,
-            0x09: BlockUpdate,
-            0x05: AcknowledgeBlockChange,
-            0x03: EntityAnimation,
-            0x46: SetHeadRotation,
-            0x2D: UpdateEntityPositionRotation,
-            0x2E: UpdateEntityRotation,
-            0x51: SetHeldItem,
-            0x2C: UpdateEntityPosition,
-            0x01: SpawnEntity,
-            0x3C: PlayerInfoUpdate,
-            0x55: DisplayObjective,
-            0x30: OpenBook,
-            0x29: LoginPlay,
-            0x3E: SyncronizePlayerPosition,
-            0x54: SetDefaultSpawnPosition,
-            0x52: SetCenterChunk,
-            0x25: ChunkDataUpdateLight,
-            0x20: GameEvent,
-            0x24: KeepAlive,
-            0x56: SetEntityMetadata
+            #TODO: text component parsing
+            0x6A: {"SetTabListHeaderFooter": [{"header": Pack.STRING}, {"footer": Pack.STRING}]},
+
+            0x26: {"WorldEvent": [{"event": Pack.INT}, {"position": Pack.LOCATION}, {"data": Pack.INT}, {"disable_relative_volume": Pack.BYTE}]},
+            0x09: {"BlockUpdate": [{"location": Pack.LOCATION}, {"block_id": Pack.VARINT}]},
+            0x05: {"AcknowledgeBlockChange": [{"sequence_id": Pack.VARINT}]},
+            0x03: {"EntityAnimation": [{"entity_id": Pack.VARINT}, {"animation": Pack.BYTE}]},
+            0x46: {"SetHeadRotation": [{"entity_id": Pack.VARINT}, {"head_yaw": Pack.ANGLE}]},
+            0x2D: {"UpdateEntityPositionRotation": [{"entity_id": Pack.VARINT}, {"delta_x": Pack.SHORT}, {"delta_y": Pack.SHORT}, {"delta_z": Pack.SHORT}, {"yaw": Pack.ANGLE}, {"pitch": Pack.ANGLE}, {"on_ground": Pack.BYTE}]},
+            0x2E: {"UpdateEntityRotation": [{"entity_id": Pack.VARINT}, {"yaw": Pack.ANGLE}, {"pitch": Pack.ANGLE}, {"on_ground": Pack.BYTE}]},
+            0x51: {"SetHeldItem": [{"slot": Pack.BYTE}]},
+            0x2C: {"UpdateEntityPosition": [{"entity_id": Pack.VARINT}, {"delta_x": Pack.SHORT}, {"delta_y": Pack.SHORT}, {"delta_z": Pack.SHORT}, {"on_ground": Pack.BYTE}]},
+            0x01: {"SpawnEntity": [{"entity_id": Pack.VARINT}, {"entity_uuid": Pack.BYTE}, {"type": Pack.VARINT}, {"x": Pack.DOUBLE}, {"y": Pack.DOUBLE}, {"z": Pack.DOUBLE}, {"pitch": Pack.ANGLE}, {"yaw": Pack.ANGLE}, {"head_pitch": Pack.ANGLE}, {"data": Pack.VARINT}, {"velocity_x": Pack.SHORT}, {"velocity_y": Pack.SHORT}, {"velocity_z": Pack.SHORT}]},
+
+            #TODO: I DIDNT EVEN REDO THIS PACKET I AM LAZY
+            0x3C: {"PlayerInfoUpdate": [{"WHOLEPACKETPLSHELP": Pack.BYTE}]},
+            0x55: {"DisplayObjective": [{"position": Pack.VARINT}, {"score_name": Pack.STRING}]},
+            0x30: {"OpenBook": [{"hand": Pack.VARINT}]},
+            0x29: {"LoginPlay": [{"entity_id": Pack.INT}, {"is_hardcore": Pack.BYTE}, {"dimensions": Pack.DATA}, {"max_players": Pack.VARINT}, {"view_distance": Pack.VARINT}, {"simulation_distance": Pack.VARINT}, {"reduced_debug_info": Pack.BYTE}, {"respawn_screen": Pack.BYTE}, {"limited_crafting": Pack.BYTE}, {"dimension_typ": Pack.STRING}, {"dimension_name": Pack.STRING}, {"seed": Pack.LONG}, {"gamemode": Pack.GAMEMODE}, {"previous_gamemode": Pack.GAMEMODE}, {"is_debug": Pack.BYTE}, {"is_flat": Pack.BYTE}, {"has_death_location": Pack.BYTE}, {"portal_cooldown": Pack.VARINT}]},
+            0x3E: {"SyncronizePlayerPosition": [{"x": Pack.DOUBLE}, {"y": Pack.DOUBLE}, {"z": Pack.DOUBLE}, {"yaw": Pack.FLOAT}, {"pitch": Pack.FLOAT}, {"flags": Pack.BYTE}, {"teleport_id": Pack.VARINT}]},
+            0x54: {"SetDefaultSpawnPosition": [{"location": Pack.LOCATION}, {"angle": Pack.FLOAT}]},
+            0x52: {"SetCenterChunk": [{"chunk_x": Pack.VARINT}, {"chunk_z": Pack.VARINT}]},
+
+            #TODO: I DIDNT EVEN REDO THIS PACKET I AM LAZY
+            #TODO: IM SO LAZY I COPIED THIS LINE ^
+            0x25: {"ChunkDataUpdateLight": [{"WHOLEPACKETAGAIN": Pack.BYTE}]},
+            0x20: {"GameEvent": [{"event": Pack.BYTE}, {"value": Pack.FLOAT}]},
+            0x24: {"KeepAlive": [{"keep_alive_id": Pack.LONG}]},
+            0x56: {"SetEntityMetadata": [{"entity_id": Pack.VARINT}, {"metadata": Pack.DATA}]}
         }
     }
 }

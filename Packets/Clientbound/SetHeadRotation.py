@@ -1,8 +1,11 @@
-from Packets.PacketUtil import pack_varint
+from Packets.PacketUtil import Pack
+from Util import enforce_annotations
 
-class SetHeadRotation:
+from Packets.PacketUtil import Packet
+
+Pack = Pack()
+
+class SetHeadRotation(Packet):
+    @enforce_annotations
     def __init__(self, entity_id, yaw):
-        entity_id = pack_varint(entity_id)
-
-        self.entity_id = entity_id
-        self.yaw = yaw
+        return super().__init__(entity_id, yaw)
