@@ -74,12 +74,15 @@ Pack = Pack()
 class PacketPayloads:
     class Unpack:
         class ENCRYPTED:
-            VARINT = Unpack.unpack_varint
-            STRING = Unpack.unpack_string
+            VARINT = Unpack.unpack_encrypted_varint
+            STRING = Unpack.unpack_encrypted_string
             BYTE = Unpack.unpack_encrypted_byte
             SHORT = Unpack.unpack_encrypted_short
-            UNSIGNED_SHORT = Unpack.unpack_unsigned_short
+            UNSIGNED_SHORT = Unpack.unpack_encrypted_unsigned_short
             LONG = Unpack.unpack_encrypted_long
+            UUID = Unpack.unpack_encrypted_uuid
+            DATA = Unpack.unpack_encrypted_data
+            REMAINING = Unpack.unpack_encrypted_remaining
 
         class UNENCRYPTED:
             VARINT = Unpack.unpack_varint
@@ -88,11 +91,13 @@ class PacketPayloads:
             SHORT = Unpack.unpack_short
             UNSIGNED_SHORT = Unpack.unpack_unsigned_short
             LONG = Unpack.unpack_long
+            UUID = Unpack.unpack_uuid
+            DATA = Unpack.unpack_data
 
     class Pack:
         VARINT = Pack.pack_varint
         STRING = Pack.write_string
-        BYTE = 1
+        BYTE = Pack.pack_byte
         SHORT = 1
         UNSIGNED_SHORT = 1
         LONG = Pack.pack_long
@@ -114,34 +119,33 @@ GameStates = {
             0x01: {"PingRequest": [{"time": Unpack.UNENCRYPTED.LONG}]}
         },
         "S2C": {
-            0x00: {"StatusResponse": [{"response": Pack.DATA}]},
+            0x00: {"StatusResponse": [{"response": Pack.STRING}]},
             0x01: {"PingResponse": [{"time": Pack.LONG}]}
         }
     },
 
 
-    "LOGIN": {}}
-"""
+    "LOGIN": {
         "C2S": {
-            0x00: LoginStart,
-            0x01: EncryptionResponse,
-            0x03: LoginAcknowledged
+            0x00: {"LoginStart": [{"name": Unpack.UNENCRYPTED.STRING}, {"uuid": Unpack.UNENCRYPTED.UUID}]},
+            0x01: {"EncryptionResponse": [{"shared_secret": Unpack.UNENCRYPTED.DATA}, {"verify_token": Unpack.UNENCRYPTED.DATA}]},
+            0x03: {"LoginAcknowledged": []}
         },
         "S2C": {
-            0x01: EncryptionRequest,
-            0x02: LoginSuccess
+            0x01: {"EncryptionRequest": [{"server_id": Pack.STRING}, {"public_key": Pack.DATA}, {"verify_token": Pack.DATA}]},
+            0x02: {"LoginSuccess": [{"uuid": Pack.BYTE}, {"name": Pack.STRING}, {"properties": Pack.DATA}]}
         }
     },
 
     "CONFIGURATION": {
         "C2S": {
-            0x00: ClientInformation,
-            0x01: ServerboundPluginMessage,
-            0x02: AcknowledgeFinishConfiguration
+            0x00: {"ClientInformation": [{"locale": Unpack.ENCRYPTED.STRING}, {"view_distance": Unpack.ENCRYPTED.BYTE}, {"chat_mode": Unpack.ENCRYPTED.VARINT}, {"chat_colors": Unpack.ENCRYPTED.BYTE}, {"displayed_skin_parts": Unpack.ENCRYPTED.BYTE}, {"main_hand": Unpack.ENCRYPTED.VARINT}, {"enable_text_filtering": Unpack.ENCRYPTED.BYTE}, {"allow_server_listing": Unpack.ENCRYPTED.BYTE}]},
+            0x01: {"ServerboundPluginMessage": [{"channel": Unpack.ENCRYPTED.STRING}, {"data": Unpack.ENCRYPTED.REMAINING}]},
+            0x02: {"AcknowledgeFinishConfiguration": []}
         },
         "S2C": {
-            0x02: ConfigurationFinish,
-            0x05: RegistryData
+            0x02: {"ConfigurationFinish": []},
+            0x05: {"RegistryData": [{"data": Pack.BYTE}]}
         }
     },
 
@@ -186,4 +190,3 @@ GameStates = {
         }
     }
 }
-"""

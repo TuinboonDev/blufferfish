@@ -15,6 +15,10 @@ from Packets.Serverbound.PingRequest import PingRequest
 from Packets.Serverbound.StatusRequest import StatusRequest
 from Packets.Clientbound.PingResponse import PingResponse
 from Packets.Clientbound.StatusResponse import StatusResponse
+from Packets.Clientbound.EncryptionRequest import EncryptionRequest
+from Packets.Clientbound.LoginSuccess import LoginSuccess
+from Packets.Clientbound.RegistryData import RegistryData
+from Packets.Clientbound.ConfigurationFinish import ConfigurationFinish
 
 from Packets.Serverbound.Handshake import Handshake
 
@@ -98,7 +102,7 @@ def main():
         if gamestate.get_gamestate() == "HANDSHAKE":
             packet = get_packet(serverbound, client_socket, gamestate)
 
-            if packet.get("name") == "Handshake":
+            if packet.get("packet_name") == "Handshake":
                 if packet.get("next_state") == 1:
                     gamestate.set_gamestate("STATUS")
                 elif packet.get("next_state") == 2:
@@ -107,7 +111,7 @@ def main():
         if gamestate.get_gamestate() == "STATUS":
             packet = get_packet(serverbound, client_socket, gamestate)
 
-            if packet.get("name") == "StatusRequest":
+            if packet.get("packet_name") == "StatusRequest":
                 sample = [
                     {"name": "BlufferFish", "id": "d552a0a7-b211-47c1-9396-5f39dcfedc73"},
                     {"name": "Tuinboon", "id": "d552a0a7-b211-47c1-9396-5f39dcfedc73"}
@@ -125,23 +129,23 @@ def main():
                     True
                 )
 
-                SLP_packet = StatusResponse(bytes(json.dumps(server_data.get_data()), encoding="utf-8"))
+                SLP_packet = StatusResponse(json.dumps(server_data.get_data()))
 
                 clientbound.send(SLP_packet, gamestate)
 
             packet = get_packet(serverbound, client_socket, gamestate)
 
-            if packet.get("name") == "PingRequest":
+            if packet.get("packet_name") == "PingRequest":
                 ping_response = PingResponse(packet.get("time"))
                 clientbound.send(ping_response, gamestate)
                 print("Sent ping packet")
-    """
+
         if gamestate.get_gamestate() == "LOGIN":
             packet = get_packet(serverbound, client_socket, gamestate)
 
-            if isinstance(packet, LoginStart):
+            if packet.get("packet_name") == "LoginStart":
                 name = packet.get("name")
-                uuid_bytes = packet.get("uuid_bytes")
+                uuid_bytes = packet.get("uuid")
 
             do_encryption = True
 
@@ -168,7 +172,7 @@ def main():
 
                 packet = get_packet(serverbound, client_socket, gamestate)
 
-                if isinstance(packet, EncryptionResponse):
+                if packet.get("packet_name") == "EncryptionResponse":
                     shared_secret = packet.get("shared_secret")
                     verif_token = packet.get("verify_token")
 
@@ -209,25 +213,25 @@ def main():
 
                 #LOGIN ACKNOWLEDGEMENT
                 packet = get_encrypted_packet(serverbound, client_socket, gamestate, decryptor)
-                if isinstance(packet, LoginAcknowledged):
+                if packet.get("packet_name") == "LoginAcknowledged":
                     gamestate.set_gamestate("CONFIGURATION")
                     print("Login Acknowledged")
 
         if gamestate.get_gamestate() == "CONFIGURATION":
             packet = get_encrypted_packet(serverbound, client_socket, gamestate, decryptor)
 
-            if isinstance(packet, ServerboundPluginMessage):
+            if packet.get("packet_name") == "ServerboundPluginMessage":
                 print("Plugin Message")
 
             packet = get_encrypted_packet(serverbound, client_socket, gamestate, decryptor)
 
-            if isinstance(packet, ClientInformation):
+            if packet.get("packet_name") == "ClientInformation":
                 skin_parts = packet.get("displayed_skin_parts")
                 print("Client info")
 
             # Registry Data
 
-            registry_data = RegistryData()
+            registry_data = RegistryData(open("registry_info.packet", "rb").read())
 
             clientbound.send_encrypted(registry_data, gamestate, encryptor)
 
@@ -239,7 +243,7 @@ def main():
 
             packet = get_encrypted_packet(serverbound, client_socket, gamestate, decryptor)
 
-            if isinstance(packet, AcknowledgeFinishConfiguration):
+            if packet.get("packet_name") == "AcknowledgeFinishConfiguration":
                 gamestate.set_gamestate("PLAY")
                 print("Configuration Finished")
 
@@ -534,8 +538,6 @@ def main():
                 #networking.broadcast(set_tablist_header_footer, gamestate)s
 
             threading.Thread(target=updateTab).start()
-    """
-
 
     networking = Networking()
 

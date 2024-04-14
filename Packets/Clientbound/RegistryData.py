@@ -1,7 +1,11 @@
-from Packets.PacketUtil import pack_varint
+from Packets.PacketUtil import Pack
+from Util import enforce_annotations
 
-class RegistryData:
-    def __init__(self):
-        registry_data = open("registry_info.packet", "rb").read()
+from Packets.PacketUtil import Packet
 
-        self.registry_data = registry_data
+Pack = Pack()
+
+class RegistryData(Packet):
+    @enforce_annotations
+    def __init__(self, registry_data: bytes):
+        return super().__init__(registry_data)

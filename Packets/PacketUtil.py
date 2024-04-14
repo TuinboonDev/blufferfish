@@ -21,7 +21,7 @@ class ByteBuffer:
     def recv(self, length: int):
         data = self.buffer[:length]
         self.buffer = self.buffer[length:]
-        return data
+        return bytes(data)
 
 class Unpack:
     def unpack_varint(self, bytebuf, *args):
@@ -98,6 +98,29 @@ class Unpack:
             raise FileNotFoundError("Decryptor not set")
         return struct.unpack(">H", args[0].update(bytebuf.recv(2)))[0]
 
+    def unpack_uuid(self, bytebuf, *args):
+        return bytebuf.recv(16)
+
+    def unpack_encrypted_uuid(self, bytebuf, *args):
+        if not args[0]:
+            raise FileNotFoundError("Decryptor not set")
+        return args[0].update(bytebuf.recv(16))
+
+    def unpack_encrypted_remaining(self, bytebuf, *args):
+        if not args[0]:
+            raise FileNotFoundError("Decryptor not set")
+        return args[0].update(bytebuf.recv(len(bytebuf)))
+
+    def unpack_data(self, bytebuf, *args):
+        length = self.unpack_varint(bytebuf)
+        return bytebuf.recv(length)
+
+    def unpack_encrypted_data(self, bytebuf, *args):
+        if not args[0]:
+            raise FileNotFoundError("Decryptor not set")
+        length = self.unpack_encrypted_varint(bytebuf, args[0])
+        return args[0].update(bytebuf.recv(length))
+
     def decrypt_byte(self, b, *args):
         if not args[0]:
             raise FileNotFoundError("Decryptor not set")
@@ -126,6 +149,10 @@ class Pack:
             if d == 0:
                 break
         return o
+
+    @enforce_annotations
+    def pack_byte(self, d: bytes):
+        return d
 
     @enforce_annotations
     def pack_data(self, d: bytes):
