@@ -20,8 +20,6 @@ class SetTabListHeaderFooter:
         footer = Pack.write_string(footer)
         end = b'\x00'
 
-        print(footer_length)
-
         data = (
             #tag_compound +
             #name_compound_length +

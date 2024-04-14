@@ -13,27 +13,24 @@ class Clientbound:
         self.socket = socket
 
     def __send(self, packet, gamestate, encryptor):
-        print(packet)
-        #packet_id_map = {v: k for k, v in GameStates[gamestate.get_gamestate()]["S2C"].items()}
-        for p in list(GameStates[gamestate.get_gamestate()]["S2C"].values()):
-            if p[0]["class"] == type(packet):
-                p.pop(0)
-                packet_sequence = p
+        packet_a = list(GameStates[gamestate.get_gamestate()]["S2C"].values())
+
+        for p in packet_a:
+            if list(p.keys())[0] == packet.__class__.__name__:
+                packet_sequence = list(p.values())[0]
                 break
 
-        final_packet = b''
+        for packet_id, packet_b in GameStates[gamestate.get_gamestate()]["S2C"].items():
+            if list(packet_b.keys())[0] == packet.__class__.__name__:
+                packet_id = packet_id
+                break
+
+        final_packet = Pack.pack_varint(packet_id)
 
         for x in range(len(packet.get())):
             method = list(packet_sequence[x].values())[x]
-            input = list(packet.__dict__.values())[x]
-            print(input)
-            print(method)
-            print(method(input))
+            input = packet.get()[x]
             final_packet += method(input)
-            break
-
-        print("\n\n")
-        print(final_packet)
 
         if encryptor is not None:
             self.socket.send(encryptor.update(Pack.pack_varint(len(final_packet)) + final_packet))
@@ -48,20 +45,16 @@ class Clientbound:
 
 class Serverbound:
     def receive(self, bytebuf, packet_id, gamestate, decryptor):
-        #Is this if statement reliable?
-
         game_state = gamestate.get_gamestate()
         if packet_id not in GameStates[game_state]["C2S"]:
             raise ValueError(f"Packet ID {packet_id} is not in the PacketMap")
 
-        packet_data = {"name": GameStates[game_state]["C2S"][packet_id][0]["name"]}
+        packet_name = list(GameStates[game_state]["C2S"][packet_id].keys())[0]
 
-        for payload in GameStates[game_state]["C2S"][packet_id]:
+        packet_data = {"name": packet_name}
+
+        for payload in GameStates[game_state]["C2S"][packet_id][packet_name]:
             for key, value in payload.items():
-                if list(payload.keys())[0] == "encrypted" or list(payload.keys())[0] == "name":
-                    continue
                 packet_data[key] = value(bytebuf, decryptor)
-
-        print(packet_data)
 
         return packet_data

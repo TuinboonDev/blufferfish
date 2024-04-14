@@ -62,7 +62,7 @@ class GameState:
         if state in GameStates:
             self.gamestate = state
         else:
-            print(GameStates)
+            #print(GameStates)
             print(f"Error: {state} is not a valid gamestate")
 
     def get_gamestate(self):
@@ -96,6 +96,7 @@ class PacketPayloads:
         SHORT = 1
         UNSIGNED_SHORT = 1
         LONG = Pack.pack_long
+        DATA = Pack.pack_data
 
 Pack = PacketPayloads.Pack
 Unpack = PacketPayloads.Unpack
@@ -103,18 +104,18 @@ Unpack = PacketPayloads.Unpack
 GameStates = {
     "HANDSHAKE": {
         "C2S": {
-            0x00: [{"name": "Handshake"}, {"protocol_version": Unpack.ENCRYPTED.VARINT}, {"server_address": Unpack.UNENCRYPTED.STRING}, {"server_port": Unpack.UNENCRYPTED.UNSIGNED_SHORT}, {"next_state": Unpack.UNENCRYPTED.VARINT}]
+            0x00: {"Handshake": [{"protocol_version": Unpack.UNENCRYPTED.VARINT}, {"server_address": Unpack.UNENCRYPTED.STRING}, {"server_port": Unpack.UNENCRYPTED.UNSIGNED_SHORT}, {"next_state": Unpack.UNENCRYPTED.VARINT}]}
         }
     },
 
     "STATUS": {
         "C2S": {
-            0x00: [{"name": "StatusRequest"}],
-            0x01: [{"name": "PingRequest"}, {"time": Unpack.UNENCRYPTED.LONG}]
+            0x00: {"StatusRequest": []},
+            0x01: {"PingRequest": [{"time": Unpack.UNENCRYPTED.LONG}]}
         },
         "S2C": {
-            0x00: [{"class": StatusResponse}, {"response": Pack.STRING}],
-            0x1: [{"class": PingResponse}, {"time": Pack.LONG}]
+            0x00: {"StatusResponse": [{"response": Pack.DATA}]},
+            0x01: {"PingResponse": [{"time": Pack.LONG}]}
         }
     },
 

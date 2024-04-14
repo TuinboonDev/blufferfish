@@ -5,6 +5,7 @@ import struct
 import os
 import time
 import threading
+import json
 import requests
 
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
@@ -57,10 +58,11 @@ def main():
     def get_packet(serverbound: Serverbound, socket: socket.socket, gamestate: GameState):
         try:
             packet_length = Unpack.unpack_varint(socket)
-        except TypeError:
+        except TypeError as e:
+            raise e
             ClientError("Client disconnected")
-            networking.remove_client(socket)
-            general_player_handler.remove_player(socket)
+            #networking.remove_client(socket)
+            #general_player_handler.remove_player(socket)
             sys.exit()
 
         buf = ByteBuffer(socket.recv(packet_length))
@@ -95,7 +97,6 @@ def main():
 
         if gamestate.get_gamestate() == "HANDSHAKE":
             packet = get_packet(serverbound, client_socket, gamestate)
-            print(packet.get("next_state"))
 
             if packet.get("name") == "Handshake":
                 if packet.get("next_state") == 1:
@@ -124,16 +125,12 @@ def main():
                     True
                 )
 
-                SLP_packet = StatusResponse(str(server_data.get_data()))
-
-                print(SLP_packet)
+                SLP_packet = StatusResponse(bytes(json.dumps(server_data.get_data()), encoding="utf-8"))
 
                 clientbound.send(SLP_packet, gamestate)
 
-
             packet = get_packet(serverbound, client_socket, gamestate)
 
-            print(packet.get("name"))
             if packet.get("name") == "PingRequest":
                 ping_response = PingResponse(packet.get("time"))
                 clientbound.send(ping_response, gamestate)

@@ -4,10 +4,10 @@ import struct
 
 class Packet:
     def __init__(self, *packet_data):
-        self.packet_data = packet_data[0]
+        self.packet_data = packet_data
 
     def get(self):
-        return self.packet_data
+        return list(self.packet_data)
 
 class ByteBuffer:
     @enforce_annotations
