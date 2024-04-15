@@ -222,6 +222,10 @@ class Pack:
         return struct.pack(">d", d)
 
     @enforce_annotations
+    def pack_short(self, d: int):
+        return struct.pack(">h", d)
+
+    @enforce_annotations
     def pack_players(self):
         pass
 

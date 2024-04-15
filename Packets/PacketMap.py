@@ -62,7 +62,6 @@ class GameState:
         if state in GameStates:
             self.gamestate = state
         else:
-            #print(GameStates)
             print(f"Error: {state} is not a valid gamestate")
 
     def get_gamestate(self):
@@ -101,7 +100,7 @@ class PacketPayloads:
         VARINT = Pack.pack_varint
         STRING = Pack.write_string
         BYTE = Pack.pack_byte
-        SHORT = 1
+        SHORT = Pack.pack_short
         UNSIGNED_SHORT = 1
         LONG = Pack.pack_long
         DATA = Pack.pack_data
@@ -183,7 +182,7 @@ GameStates = {
             0x26: {"WorldEvent": [{"event": Pack.INT}, {"position": Pack.LOCATION}, {"data": Pack.INT}, {"disable_relative_volume": Pack.BYTE}]},
             0x09: {"BlockUpdate": [{"location": Pack.LOCATION}, {"block_id": Pack.VARINT}]},
             0x05: {"AcknowledgeBlockChange": [{"sequence_id": Pack.VARINT}]},
-            0x03: {"EntityAnimation": [{"entity_id": Pack.VARINT}, {"animation": Pack.BYTE}]},
+            0x03: {"EntityAnimation": [{"entity_id": Pack.VARINT}, {"animation": Pack.REAL_BYTE}]},
             0x46: {"SetHeadRotation": [{"entity_id": Pack.VARINT}, {"head_yaw": Pack.ANGLE}]},
             0x2D: {"UpdateEntityPositionRotation": [{"entity_id": Pack.VARINT}, {"delta_x": Pack.SHORT}, {"delta_y": Pack.SHORT}, {"delta_z": Pack.SHORT}, {"yaw": Pack.ANGLE}, {"pitch": Pack.ANGLE}, {"on_ground": Pack.BYTE}]},
             0x2E: {"UpdateEntityRotation": [{"entity_id": Pack.VARINT}, {"yaw": Pack.ANGLE}, {"pitch": Pack.ANGLE}, {"on_ground": Pack.BYTE}]},

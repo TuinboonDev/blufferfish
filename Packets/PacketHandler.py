@@ -31,16 +31,10 @@ class Clientbound:
         final_packet = Pack.pack_varint(packet_id)
 
         for x in range(len(packet.get())):
-            try:
-                method = list(packet_sequence[x].values())[0]
-                input = packet.get()[x]
-                final_packet += method(input)
-            except Exception as e:
-                print("\n")
-                print(method)
-                print(packet.__class__.__name__)
-                print("\n")
-                raise e
+            method = list(packet_sequence[x].values())[0]
+            input = packet.get()[x]
+            final_packet += method(input)
+
 
 
 
@@ -48,9 +42,6 @@ class Clientbound:
             self.socket.send(encryptor.update(Pack.pack_varint(len(final_packet)) + final_packet))
         else:
             self.socket.send(Pack.pack_varint(len(final_packet)) + final_packet)
-
-        if packet.__class__.__name__ == "SynchronizePlayerPosition":
-            print(Pack.pack_varint(len(final_packet)) + final_packet)
 
     def send(self, packet, gamestate):
         self.__send(packet, gamestate, None)
@@ -61,7 +52,7 @@ class Clientbound:
 class Serverbound:
     def receive(self, bytebuf, packet_id, gamestate, decryptor):
         game_state = gamestate.get_gamestate()
-        print(GameStates)
+
         if packet_id not in GameStates[game_state]["C2S"]:
             raise ValueError(f"Packet ID {packet_id} is not in the PacketMap")
 
@@ -71,14 +62,6 @@ class Serverbound:
 
         for payload in GameStates[game_state]["C2S"][packet_id][packet_name]:
             for key, value in payload.items():
-                try:
-                    packet_data[key] = value(bytebuf, decryptor)
-                except Exception as e:
-                    print(key)
-                    print("EEEEEEEEE")
-                    print(value)
-                    print(bytebuf.buffer)
-                    print("BBBBBB")
-                    raise e
+                packet_data[key] = value(bytebuf, decryptor)
 
         return packet_data

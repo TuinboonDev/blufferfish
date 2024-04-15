@@ -11,8 +11,6 @@ import requests
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from hashlib import sha1
 
-from Packets.Serverbound.PingRequest import PingRequest
-from Packets.Serverbound.StatusRequest import StatusRequest
 from Packets.Clientbound.PingResponse import PingResponse
 from Packets.Clientbound.StatusResponse import StatusResponse
 from Packets.Clientbound.EncryptionRequest import EncryptionRequest
@@ -38,8 +36,6 @@ from Packets.Clientbound.EntityAnimation import EntityAnimation
 from Packets.Clientbound.AcknowledgeBlockChange import AcknowledgeBlockChange
 from Packets.Clientbound.BlockUpdate import BlockUpdate
 from Packets.Clientbound.WorldEvent import WorldEvent
-
-from Packets.Serverbound.Handshake import Handshake
 
 from Packets.PacketHandler import Clientbound, Serverbound
 from Packets.ServerData import ServerData
@@ -309,7 +305,6 @@ def main():
 
             teleport_id = 123
 
-            print(rotation)
             sync_player_pos = SynchronizePlayerPosition(position[0], position[1], position[2], rotation[0], rotation[1], b'\x00', teleport_id)
 
             clientbound.send_encrypted(sync_player_pos, gamestate, encryptor)
@@ -458,13 +453,7 @@ def main():
                         yaw = packet.get("yaw")
                         pitch = packet.get("pitch")
 
-                        yaw = int((yaw / 360.0) * 256.0) & 0xff #convert
-                        pitch = int((pitch / 360.0) * 256.0) & 0xff #convert
-
                         general_player_handler.set_rotation(entity_id, (pitch, yaw))
-
-                        yaw = struct.pack("B", yaw)
-                        pitch = struct.pack("B", pitch)
 
                         delta_x = int((currentX * 32 - prevX * 32) * 128)
                         delta_y = int((currentY * 32 - prevY * 32) * 128)
@@ -483,13 +472,7 @@ def main():
                         yaw = packet.get("yaw")
                         pitch = packet.get("pitch")
 
-                        yaw = int((yaw / 360.0) * 256.0) & 0xff #convert
-                        pitch = int((pitch / 360.0) * 256.0) & 0xff #convert
-
                         general_player_handler.set_rotation(entity_id, (pitch, yaw))
-
-                        yaw = struct.pack("B", yaw)
-                        pitch = struct.pack("B", pitch)
 
                         update_entity_rotation = UpdateEntityRotation(entity_id, yaw, pitch, on_ground)
 
@@ -544,14 +527,13 @@ def main():
                         clientbound.send(acknowledge_block_change, gamestate)
 
                         #TODO: add break speed checker
-                        block_update = BlockUpdate(packet.get("position"), 0)
+                        block_update = BlockUpdate(packet.get("location"), 0)
 
                         networking.send_to_others(block_update, client_socket, gamestate)
 
-                        world_event = WorldEvent(2001, packet.get("position"), 1, False)
+                        world_event = WorldEvent(2001, packet.get("location"), 1, b'\x00')
 
                         networking.send_to_others(world_event, client_socket, gamestate)
-                        print("Player Action")
 
             threading.Thread(target=keepListening).start()
 
