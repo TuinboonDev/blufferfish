@@ -7,5 +7,5 @@ Pack = Pack()
 
 class SetDefaultSpawnPosition(Packet):
     @enforce_annotations
-    def __init__(self, x: int, y: int, z: int, angle: int):
-        return super().__init__(x, y, z, angle)
+    def __init__(self, location: tuple, angle: int):
+        return super().__init__(location, angle)

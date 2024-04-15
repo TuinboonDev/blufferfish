@@ -112,6 +112,7 @@ class PacketPayloads:
         PLAYERS = Pack.pack_players
         GAMEMODE = Pack.pack_gamemode
         FLOAT = Pack.pack_float
+        REAL_BYTE = Pack.pack_real_byte
 
 Pack = PacketPayloads.Pack
 Unpack = PacketPayloads.Unpack
@@ -161,7 +162,7 @@ GameStates = {
 
     "PLAY": {
         "C2S": {
-            0x21: {"PlayerAction": [{"status": Unpack.ENCRYPTED.VARINT}, {"location": Unpack.ENCRYPTED.LOCATION}, {"face": Pack.BYTE}, {"sequence": Pack.VARINT}]},
+            0x21: {"PlayerAction": [{"status": Unpack.ENCRYPTED.VARINT}, {"location": Unpack.ENCRYPTED.LOCATION}, {"face": Unpack.ENCRYPTED.BYTE}, {"sequence_id": Unpack.ENCRYPTED.VARINT}]},
             0x10: {"ServerboundPluginMessage": [{"channel": Unpack.ENCRYPTED.STRING}, {"data": Unpack.ENCRYPTED.REMAINING}]},
             0x20: {"PlayerAbilities": [{"flags": Unpack.ENCRYPTED.BYTE}]},
             0x33: {"SwingArm": [{"hand": Unpack.ENCRYPTED.VARINT}]},
@@ -195,16 +196,17 @@ GameStates = {
             0x55: {"DisplayObjective": [{"position": Pack.VARINT}, {"score_name": Pack.STRING}]},
             0x30: {"OpenBook": [{"hand": Pack.VARINT}]},
             0x29: {"LoginPlay": [{"entity_id": Pack.INT}, {"is_hardcore": Pack.BYTE}, {"dimensions": Pack.DATA}, {"max_players": Pack.VARINT}, {"view_distance": Pack.VARINT}, {"simulation_distance": Pack.VARINT}, {"reduced_debug_info": Pack.BYTE}, {"respawn_screen": Pack.BYTE}, {"limited_crafting": Pack.BYTE}, {"dimension_typ": Pack.STRING}, {"dimension_name": Pack.STRING}, {"seed": Pack.LONG}, {"gamemode": Pack.GAMEMODE}, {"previous_gamemode": Pack.GAMEMODE}, {"is_debug": Pack.BYTE}, {"is_flat": Pack.BYTE}, {"has_death_location": Pack.BYTE}, {"portal_cooldown": Pack.VARINT}]},
-            0x3E: {"SyncronizePlayerPosition": [{"x": Pack.DOUBLE}, {"y": Pack.DOUBLE}, {"z": Pack.DOUBLE}, {"yaw": Pack.FLOAT}, {"pitch": Pack.FLOAT}, {"flags": Pack.BYTE}, {"teleport_id": Pack.VARINT}]},
+            0x3E: {"SynchronizePlayerPosition": [{"x": Pack.DOUBLE}, {"y": Pack.DOUBLE}, {"z": Pack.DOUBLE}, {"yaw": Pack.FLOAT}, {"pitch": Pack.FLOAT}, {"flags": Pack.BYTE}, {"teleport_id": Pack.VARINT}]},
             0x54: {"SetDefaultSpawnPosition": [{"location": Pack.LOCATION}, {"angle": Pack.FLOAT}]},
             0x52: {"SetCenterChunk": [{"chunk_x": Pack.VARINT}, {"chunk_z": Pack.VARINT}]},
 
             #TODO: I DIDNT EVEN REDO THIS PACKET I AM LAZY
             #TODO: IM SO LAZY I COPIED THIS LINE ^
             0x25: {"ChunkDataUpdateLight": [{"WHOLEPACKETAGAIN": Pack.BYTE}]},
-            0x20: {"GameEvent": [{"event": Pack.BYTE}, {"value": Pack.FLOAT}]},
+            0x20: {"GameEvent": [{"event": Pack.REAL_BYTE}, {"value": Pack.FLOAT}]},
             0x24: {"KeepAlive": [{"keep_alive_id": Pack.LONG}]},
-            0x56: {"SetEntityMetadata": [{"entity_id": Pack.VARINT}, {"metadata": Pack.DATA}]}
+            #TODO: I DIDNT EVEN REDO THIS PACKET I AM LAZY
+            0x56: {"SetEntityMetadata": [{"WHOLEPACKET": Pack.BYTE}]}
         }
     }
 }

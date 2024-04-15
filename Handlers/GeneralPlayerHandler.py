@@ -12,7 +12,7 @@ class Player:
         self.skin_parts = skin_parts
         self.socket = socket
         self.position = (8,320,8)
-        self.rotation = (0,0)
+        self.rotation = (0.0,0.0)
 
 class GeneralPlayerHandler:
     def __init__(self):
@@ -49,9 +49,12 @@ class GeneralPlayerHandler:
 
     @enforce_annotations
     def set_rotation(self, entity_id: int, rotation: tuple):
+        float_rotation = ()
+        for num in rotation:
+            float_rotation += (float(num),)
         for player in self.players:
-            if player.rotation == entity_id:
-                player.rotation = rotation
+            if player.entity_id == entity_id:
+                player.rotation = float_rotation
                 break
 
     @enforce_annotations

@@ -38,9 +38,10 @@ class Clientbound:
             except Exception as e:
                 print("\n")
                 print(method)
-                print(input)
-                print(packet.get())
-                print(packet_sequence)
+                print(packet.__class__.__name__)
+                print("\n")
+                raise e
+
 
 
         if encryptor is not None:

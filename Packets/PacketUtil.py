@@ -188,7 +188,12 @@ class Pack:
         return struct.pack(">q", d)
 
     @enforce_annotations
-    def pack_location(self, x: int, y: int, z: int):
+    def pack_real_byte(self, d: int):
+        return struct.pack(">B", d)
+
+    @enforce_annotations
+    def pack_location(self, location: tuple):
+        x, y, z = location
         x &= 0x3FFFFFF  # 26 bits mask
         z &= 0x3FFFFFF  # 26 bits mask
         y &= 0xFFF      # 12 bits mask

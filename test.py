@@ -170,6 +170,11 @@ player_actions = [{"uuid": player.uuid, "name": player.name, "show": True, "prop
                                                                                                         "signature": player.session["properties"][0]["signature"]}}]
 
 number_of_players = len(player_actions)
-[0, b'\x00', b'', 5, 12, 6, b'\x00', b'\x01', b'\x00', 'minecraft:overworld', 'minecraft:overworld', 123456, 'creative', b'\x00', b'\x00', b'\x01', b'\x00', 0]
 
-[{'entity_id':}, {'is_hardcore': }, {'dimensions':}, {'max_players': }, {'view_distance': <bound method enforce_annotations.<locals>.wrapper of <Packets.PacketUtil.Pack object at 0x000001EC6C042500>>}, {'simulation_distance': <bound method enforce_annotations.<locals>.wrapper of <Packets.PacketUtil.Pack object at 0x000001EC6C042500>>}, {'reduced_debug_info': <bound method enforce_annotations.<locals>.wrapper of <Packets.PacketUtil.Pack object at 0x000001EC6C042500>>}, {'respawn_screen': <bound method enforce_annotations.<locals>.wrapper of <Packets.PacketUtil.Pack object at 0x000001EC6C042500>>}, {'limited_crafting': <bound method enforce_annotations.<locals>.wrapper of <Packets.PacketUtil.Pack object at 0x000001EC6C042500>>}, {'dimension_typ': <bound method enforce_annotations.<locals>.wrapper of <Packets.PacketUtil.Pack object at 0x000001EC6C042500>>}, {'dimension_name': <bound method enforce_annotations.<locals>.wrapper of <Packets.PacketUtil.Pack object at 0x000001EC6C042500>>}, {'seed': <bound method enforce_annotations.<locals>.wrapper of <Packets.PacketUtil.Pack object at 0x000001EC6C042500>>}, {'gamemode': <bound method Pack.pack_gamemode of <Packets.PacketUtil.Pack object at 0x000001EC6C042500>>}, {'previous_gamemode': <bound method Pack.pack_gamemode of <Packets.PacketUtil.Pack object at 0x000001EC6C042500>>}, {'is_debug': <bound method enforce_annotations.<locals>.wrapper of <Packets.PacketUtil.Pack object at 0x000001EC6C042500>>}, {'is_flat': <bound method enforce_annotations.<locals>.wrapper of <Packets.PacketUtil.Pack object at 0x000001EC6C042500>>}, {'has_death_location': <bound method enforce_annotations.<locals>.wrapper of <Packets.PacketUtil.Pack object at 0x000001EC6C042500>>}, {'portal_cooldown': <bound method enforce_annotations.<locals>.wrapper of <Packets.PacketUtil.Pack object at 0x000001EC6C042500>>}]
+
+import struct
+
+a = struct.pack(">d", 1.0)
+
+print("a")
+print(a)

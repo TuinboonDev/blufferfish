@@ -285,7 +285,7 @@ def main():
                 "minecraft:overworld",
                 123456,
                 "creative",
-                b'\x00',
+                None,
                 b'\x00',
                 b'\x01',
                 b'\x00',
@@ -309,6 +309,7 @@ def main():
 
             teleport_id = 123
 
+            print(rotation)
             sync_player_pos = SynchronizePlayerPosition(position[0], position[1], position[2], rotation[0], rotation[1], b'\x00', teleport_id)
 
             clientbound.send_encrypted(sync_player_pos, gamestate, encryptor)
@@ -317,7 +318,7 @@ def main():
 
             # Set default spawn pos
 
-            set_default_spawn_pos = SetDefaultSpawnPosition(position[0], position[1], position[2], rotation[0])
+            set_default_spawn_pos = SetDefaultSpawnPosition((position[0], position[1], position[2]), rotation[0])
 
             clientbound.send_encrypted(set_default_spawn_pos, gamestate, encryptor)
 
@@ -432,9 +433,9 @@ def main():
 
                     elif packet.get("packet_name") == "SetPlayerPosition":
                         on_ground = packet.get("on_ground")
-                        currentX = struct.unpack('>d', packet.get("x"))[0]
-                        currentY = struct.unpack('>d', packet.get("y"))[0]
-                        currentZ = struct.unpack('>d', packet.get("z"))[0]
+                        currentX = packet.get("x")
+                        currentY = packet.get("y")
+                        currentZ = packet.get("z")
 
                         general_player_handler.set_position(entity_id, (currentX, currentY, currentZ))
 
@@ -448,16 +449,14 @@ def main():
 
                     elif packet.get("packet_name") == "SetPlayerPositionRotation":
                         on_ground = packet.get("on_ground")
-                        currentX = struct.unpack('>d', packet.get("x"))[0]
-                        currentY = struct.unpack('>d', packet.get("y"))[0]
-                        currentZ = struct.unpack('>d', packet.get("z"))[0]
-                        yaw = packet.get("yaw")
-                        pitch = packet.get("pitch")
+                        currentX = packet.get("x")
+                        currentY = packet.get("y")
+                        currentZ = packet.get("z")
 
                         general_player_handler.set_position(entity_id, (currentX, currentY, currentZ))
 
-                        yaw = struct.unpack('>f', yaw)[0]
-                        pitch = struct.unpack('>f', pitch)[0]
+                        yaw = packet.get("yaw")
+                        pitch = packet.get("pitch")
 
                         yaw = int((yaw / 360.0) * 256.0) & 0xff #convert
                         pitch = int((pitch / 360.0) * 256.0) & 0xff #convert
@@ -483,9 +482,6 @@ def main():
                         on_ground = packet.get("on_ground")
                         yaw = packet.get("yaw")
                         pitch = packet.get("pitch")
-
-                        yaw = struct.unpack('>f', yaw)[0]
-                        pitch = struct.unpack('>f', pitch)[0]
 
                         yaw = int((yaw / 360.0) * 256.0) & 0xff #convert
                         pitch = int((pitch / 360.0) * 256.0) & 0xff #convert
@@ -535,12 +531,14 @@ def main():
 
                         entries = []
                         entries.append({"index": 0, "value_type": 0, "value": bit_mask})
-                        entries.append({"index": 6, "value_type": 20, "value": value}) if value != b'' else None
+                        if value != b'':
+                            entries.append({"index": 6, "value_type": 20, "value": value})
 
                         set_entity_metadata = SetEntityMetadata(packet.get("entity_id"), entries)
 
                         networking.send_to_others(set_entity_metadata, client_socket, gamestate)
                     elif packet.get("packet_name") == "PlayerAction":
+
                         acknowledge_block_change = AcknowledgeBlockChange(packet.get("sequence_id"))
 
                         clientbound.send(acknowledge_block_change, gamestate)

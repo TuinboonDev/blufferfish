@@ -35,6 +35,6 @@ class PlayerInfoUpdate(Packet):
 
         actions = actions.to_bytes(1, byteorder='big', signed=True)
 
-        packet = actions + player_actions + properties
+        packet = actions + number_of_players + players_field
 
         return super().__init__(packet)
