@@ -7,5 +7,15 @@ Sample perlin noise at all (x, z) positions. Remember that at integer coordinate
 Fill with blocks to noise height
 Adjust noise until looks good
 """
+import random
 
-class Chunk
+class Block:
+    pass
+
+class Chunk:
+    blocks: list[Block]
+    pass
+
+def generate_noise(width, height, seed, min_val=0, max_val=100):
+    random.seed(seed)
+    return [[random.randint(min_val, max_val) for _ in range(height)] for _ in range(width)]
