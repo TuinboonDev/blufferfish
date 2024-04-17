@@ -43,6 +43,9 @@ class Clientbound:
         else:
             self.socket.send(Pack.pack_varint(len(final_packet)) + final_packet)
 
+        #if packet.__class__.__name__ == "ChunkDataUpdateLight":
+
+
     def send(self, packet, gamestate):
         self.__send(packet, gamestate, None)
 

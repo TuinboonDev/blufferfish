@@ -335,8 +335,8 @@ def main():
 
             # Chunk Data and Update Light
 
-            width = 20
-            height = 20
+            width = 2
+            height = 2
 
             center = 0
 

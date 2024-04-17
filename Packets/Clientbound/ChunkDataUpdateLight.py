@@ -1,5 +1,7 @@
 from Packets.PacketUtil import Pack
 from Util import enforce_annotations
+from Handlers.GeneralChunkHandler import realchunk
+
 import struct
 
 from Packets.PacketUtil import Packet
@@ -16,7 +18,7 @@ def write_single_valued_paletted_container(entry: int):
     return data
 
 
-def write_data_ig():
+def write_data_ig(chunk_x, chunk_z):
     data = b''
     switch = 1
     for _ in range(24):
@@ -28,21 +30,22 @@ def write_data_ig():
         elif switch == 9:
             switch = 1
 
-    return data
+    return realchunk(chunk_x, chunk_z)
 
 class ChunkDataUpdateLight(Packet):
     @enforce_annotations
-    def __init__(self, chunk_x: int, chunk_z: int, data, block_entities: bytes):
+    def __init__(self, chunk_x: int, chunk_z: int, data: bytes, block_entities: bytes):
+        data = Pack.pack_data(write_data_ig(chunk_x, chunk_z))
+
         chunk_x = chunk_x.to_bytes(4, byteorder='big', signed=True)
         chunk_z = chunk_z.to_bytes(4, byteorder='big', signed=True)
 
-        heightmaps = b'\x0A' + b'\x00' #idk what to do with this
+        heightmaps = b'\x0A\x00' #idk what to do with this
 
-        data = Pack.pack_data(write_data_ig())
 
-        empty = Pack.pack_data(b'') #empty data because I dont know how to write real data
+        empty = b'\x00' #empty data because I dont know how to write real data
 
-        block_entities = Pack.pack_data(block_entities) #block entities (which is also empty)
+        block_entities = b'\x00' #block entities (which is also empty)
 
         stupid_bitsets = b'\x01\x00\x00\x00\x00\x00\x00\x00\x00'
 
