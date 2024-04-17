@@ -99,10 +99,10 @@ def generate_chunk(noise: list, chunk_x: int, chunk_z: int) -> Chunk:
                 for x in range(16):
                     block_y = -64 + (chunk_section * 16) + y
                     y_noise = 96 + get_noise(noise, chunk_x * 16 + x, chunk_z * 16 + z) * 128
-                    if y_noise > block_y:
-                        blocks.append(Block(8))
-                    else:
+                    if block_y < y_noise:
                         blocks.append(Block(1))
+                    else:
+                        blocks.append(Block(0))
         chunk_sections.append(ChunkSection(blocks))
 
     return Chunk(chunk_sections)
@@ -111,19 +111,19 @@ def get_noise(noise: list[list[float]], x: int, z: int) -> float:
     return noise[x][z]
 
 def generate_noise(width: int, height: int, seed: int) -> list[list[float]]:
-    random.seed(seed)
-    return [[random.random() for _ in range(width)] for _ in range(height)]
+    l1 = []
+    for x in range(width):
+        l2 = []
+        for z in range(height):
+            l2.append(math.sin(x / 10) * math.sin(z / 10) / 10)
+        l1.append(l2)
+
+    return l1
 
 noise = generate_noise(1024, 1024, seed=12345)
 
 def realchunk(chunk_x: int, chunk_z: int):
-    sections = []
-    for _ in range(24):
-        blocks = [Block(1) for _ in range(4096)]
-        section = ChunkSection(blocks)
-        sections.append(section)
-
-    return Chunk(sections).serialize()
+    return generate_chunk(noise, chunk_x, chunk_z).serialize()
 
 
 """@enforce_annotations
