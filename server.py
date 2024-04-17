@@ -335,8 +335,8 @@ def main():
 
             # Chunk Data and Update Light
 
-            width = 2
-            height = 2
+            width = 20
+            height = 20
 
             center = 0
 
@@ -345,11 +345,24 @@ def main():
             x_coord = center - start[0]
             y_coord = center - start[1]
 
-            for x in range(width + 1 if width % 2 == 0 else width):
+            packet_queue = []
+
+            def handle_queue():
+                while True:
+                    if packet_queue:
+                        clientbound.send_encrypted(packet_queue[0], gamestate, encryptor)
+                        packet_queue.pop(0)
+                        print("Sent packet")
+
+            def handle_y(y_coord):
                 for y in range(height + 1 if height % 2 == 0 else height):
-                    chunk_data_update_light = ChunkDataUpdateLight(x_coord, y_coord, b'', b'')
-                    clientbound.send_encrypted(chunk_data_update_light, gamestate, encryptor)
+                    packet_queue.append(ChunkDataUpdateLight(x_coord, y_coord, b'', b''))
                     y_coord += 1
+
+            threading.Thread(target=handle_queue).start()
+
+            for x in range(width + 1 if width % 2 == 0 else width):
+                threading.Thread(target=handle_y, args=(y_coord,)).start()
                 x_coord += 1
                 y_coord = center - start[1]
 

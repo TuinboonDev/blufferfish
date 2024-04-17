@@ -30,7 +30,8 @@ class ChunkSection:
     def serialize(self) -> bytes:
         data = b''
         data += struct.pack('>h', 4096)
-        unique_blocks = list(set(self.get_blocks()))
+        blocks = self.get_blocks()
+        unique_blocks = list(set(blocks))
         bpe = math.ceil(math.log2(len(unique_blocks)))
         if bpe > 0 and bpe < 4: bpe = 4
         if bpe > 8: bpe = 15
@@ -51,11 +52,10 @@ class ChunkSection:
                 palette += Pack.pack_varint(block)
             blocks_per_long = 64 // bpe
             data_length = 4096 // blocks_per_long
-            print(data_length)
             palette += Pack.pack_varint(data_length)
             data_array: list[int] = [0 for _ in range(data_length)]
             for i in range(4096):
-                data_array[i // blocks_per_long] |= unique_blocks.index(self.get_blocks()[i]) << bpe * (i % blocks_per_long)
+                data_array[i // blocks_per_long] |= unique_blocks.index(blocks[i]) << bpe * (i % blocks_per_long)
             for data_item in data_array:
                 palette += struct.pack('Q', data_item)
 
