@@ -26,6 +26,56 @@ class ChunkSection:
 
     def get_blocks(self):
         return [block.block_id for block in self.blocks]
+    
+    def serialize(self) -> bytes:
+        data = b''
+        data += struct.pack('>h', 4096)
+        unique_blocks = list(set(self.get_blocks()))
+        bpe = math.ceil(math.log2(len(unique_blocks)))
+        if bpe > 0 and bpe < 4: bpe = 4
+        if bpe > 8: bpe = 15
+
+        palette = b''
+
+        # Single valued
+        if bpe == 0:
+            palette += struct.pack('B', bpe)
+            palette += Pack.pack_varint(unique_blocks[0]) #Should be the only block in the array
+            palette += Pack.pack_varint(0)
+
+        # Indirect
+        elif bpe in range(4, 9):
+            palette += struct.pack('B', bpe)
+            palette += Pack.pack_varint(len(unique_blocks))
+            for block in unique_blocks:
+                palette += Pack.pack_varint(block)
+            blocks_per_long = 64 // bpe
+            data_length = 4096 // blocks_per_long
+            print(data_length)
+            palette += Pack.pack_varint(data_length)
+            data_array: list[int] = [0 for _ in range(data_length)]
+            for i in range(4096):
+                data_array[i // blocks_per_long] |= unique_blocks.index(self.get_blocks()[i]) << bpe * (i % blocks_per_long)
+            for data_item in data_array:
+                palette += struct.pack('Q', data_item)
+
+        # Direct
+        elif bpe == 15:
+            #TODO: Implement direct
+            print("Direct")
+
+        else:
+            raise ValueError(f"Invalid bpe {bpe}")
+
+        data += palette
+
+        #Biome palette
+        data += struct.pack('b', 0)
+        data += Pack.pack_varint(0)
+        data += struct.pack('b', 0)
+        #-------------------
+
+        return data
 
 class Chunk:
     def __init__(self, chunk_sections: list[ChunkSection]):
@@ -34,8 +84,7 @@ class Chunk:
     def serialize(self):
         data = b''
         for section in self.chunk_sections:
-            for block in section.blocks:
-                data += block.block_id.to_bytes(2, byteorder='big', signed=True)
+            data += section.serialize()
         return data
 
     def get_sections(self):
@@ -68,51 +117,13 @@ def generate_noise(width: int, height: int, seed: int) -> list[list[float]]:
 noise = generate_noise(1024, 1024, seed=12345)
 
 def realchunk(chunk_x: int, chunk_z: int):
-    data = b''
+    sections = []
+    for _ in range(24):
+        blocks = [Block(1) for _ in range(4096)]
+        section = ChunkSection(blocks)
+        sections.append(section)
 
-    chunk = generate_chunk(noise, chunk_x, chunk_z)
-
-    for section in chunk.get_sections():
-        data += struct.pack('h', 4096)
-        unique_blocks = list(set(section.get_blocks()))
-        bpe = math.ceil(math.log2(len(unique_blocks)))
-        if bpe > 0 and bpe < 4: bpe = 4
-        if bpe > 8: bpe = 15
-        palette = b''
-        if bpe == 0:
-            palette += struct.pack('B', bpe)
-            palette += Pack.pack_varint(unique_blocks[0]) #Should be the only block in the array
-            palette += Pack.pack_varint(0)
-        elif bpe in range(4, 9):
-            palette += struct.pack('B', bpe)
-            palette += Pack.pack_varint(len(unique_blocks))
-            for block in unique_blocks:
-                palette += Pack.pack_varint(block)
-            blocks_per_long = 64 / bpe
-            data_length = int(4096 / blocks_per_long)
-            print(data_length)
-            palette += Pack.pack_varint(data_length)
-            data_array: list[int] = list(range(data_length))
-            for i in range(4096):
-                data_array[int(i / blocks_per_long)] |= unique_blocks.index(section.get_blocks()[i]) << int(bpe * (i % blocks_per_long))
-            for data_item in data_array:
-                palette += struct.pack('Q', data_item)
-
-
-        elif bpe == 15:
-            #TODO: Implement direct
-            print("Direct")
-        else:
-            raise ValueError(f"Invalid bpe {bpe}")
-
-        data += palette
-
-        #Biome palette
-        data += struct.pack('b', 0)
-        data += Pack.pack_varint(0)
-        data += struct.pack('b', 0)
-        #-------------------
-    return data
+    return Chunk(sections).serialize()
 
 
 """@enforce_annotations
