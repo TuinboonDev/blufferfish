@@ -7,25 +7,25 @@ Sample perlin noise at all (x, z) positions. Remember that at integer coordinate
 Fill with blocks to noise height
 Adjust noise until looks good
 """
-import random
+import cProfile
+import io
+from pstats import SortKey
+import pstats
 import math
 import struct
+import itertools
 
 from Packets.PacketUtil import Pack
 from Util import enforce_annotations
 
 Pack = Pack()
 
-class Block:
-    def __init__(self, block_id: int):
-        self.block_id = block_id
-
 class ChunkSection:
-    def __init__(self, blocks: list[Block]):
+    def __init__(self, blocks: list[int]):
         self.blocks = blocks
 
     def get_blocks(self):
-        return [block.block_id for block in self.blocks]
+        return self.blocks
     
     def serialize(self) -> bytes:
         data = b''
@@ -82,28 +82,26 @@ class Chunk:
         self.chunk_sections = chunk_sections
 
     def serialize(self):
-        data = b''
-        for section in self.chunk_sections:
-            data += section.serialize()
-        return data
+        return b''.join(section.serialize() for section in self.chunk_sections)
 
     def get_sections(self):
         return self.chunk_sections
 
 def generate_chunk(noise: list, chunk_x: int, chunk_z: int) -> Chunk:
+    """pr = cProfile.Profile()
+    pr.enable()"""
     chunk_sections = []
+    noise_values = [[get_noise(noise, chunk_x * 16 + x, chunk_z * 16 + z) for z in range(16)] for x in range(16)] #Helps with speed
     for chunk_section in range(24):
-        blocks = []
-        for y in range(16):
-            for z in range(16):
-                for x in range(16):
-                    block_y = -64 + (chunk_section * 16) + y
-                    y_noise = 96 + get_noise(noise, chunk_x * 16 + x, chunk_z * 16 + z) * 128
-                    if block_y < y_noise:
-                        blocks.append(Block(1))
-                    else:
-                        blocks.append(Block(0))
+        blocks = [1 if -64 + (chunk_section * 16) + y < 96 + noise_values[x][z] * 128 else 0 for y, z, x in itertools.product(range(16), repeat=3)]
         chunk_sections.append(ChunkSection(blocks))
+
+    """pr.disable()
+    s = io.StringIO()
+    sortby = SortKey.TIME
+    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    ps.print_stats()
+    print(s.getvalue())"""
 
     return Chunk(chunk_sections)
 

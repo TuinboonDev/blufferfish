@@ -8,6 +8,10 @@ import threading
 import json
 import requests
 
+import cProfile
+import io
+from pstats import SortKey
+import pstats
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from hashlib import sha1
 
@@ -333,46 +337,6 @@ def main():
 
             clientbound.send_encrypted(set_center_chunk, gamestate, encryptor)
 
-            # Chunk Data and Update Light
-
-            width = 20
-            height = 20
-
-            center = 0
-
-            start = (width // 2, height // 2)
-
-            x_coord = center - start[0]
-            y_coord = center - start[1]
-
-            packet_queue = []
-
-            def handle_queue():
-                while True:
-                    if packet_queue:
-                        clientbound.send_encrypted(packet_queue[0], gamestate, encryptor)
-                        packet_queue.pop(0)
-                        print("Sent packet")
-
-            def handle_y(y_coord):
-                for y in range(height + 1 if height % 2 == 0 else height):
-                    packet_queue.append(ChunkDataUpdateLight(x_coord, y_coord, b'', b''))
-                    y_coord += 1
-
-            threading.Thread(target=handle_queue).start()
-
-            for x in range(width + 1 if width % 2 == 0 else width):
-                threading.Thread(target=handle_y, args=(y_coord,)).start()
-                x_coord += 1
-                y_coord = center - start[1]
-
-            # tp confirm
-            packet = get_encrypted_packet(serverbound, client_socket, gamestate, decryptor)
-
-            if packet.get("packet_name") == "ConfirmTeleportation":
-                if packet.get("teleport_id") == teleport_id:
-                    print("Teleportation confirmed")
-
             def keepAlive():
                 while True:
                     keep_alive = KeepAlive(123)
@@ -381,6 +345,45 @@ def main():
                     time.sleep(29)
 
             threading.Thread(target=keepAlive).start()
+
+            def send_chunks():
+                pr = cProfile.Profile()
+                pr.enable()
+
+                width = 20
+                height = 20
+
+                center = 0
+
+                start = (width // 2, height // 2)
+
+                x_coord = center - start[0]
+                y_coord = center - start[1]
+
+                for x in range(width + 1 if width % 2 == 0 else width):
+                    for y in range(height + 1 if height % 2 == 0 else height):
+                        chunk_data_update_light = ChunkDataUpdateLight(x_coord, y_coord, b'', b'')
+                        clientbound.send_encrypted(chunk_data_update_light, gamestate, encryptor)
+                        print("Packet")
+                        y_coord += 1
+                    x_coord += 1
+                    y_coord = center - start[1]
+                print("Sent chunks")
+                pr.disable()
+                s = io.StringIO()
+                sortby = SortKey.TIME
+                ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+                ps.print_stats()
+                print(s.getvalue())
+
+            threading.Thread(target=send_chunks).start() #This is so slow I have to thread it
+
+            # tp confirm
+            packet = get_encrypted_packet(serverbound, client_socket, gamestate, decryptor)
+
+            if packet.get("packet_name") == "ConfirmTeleportation":
+                if packet.get("teleport_id") == teleport_id:
+                    print("Teleportation confirmed")
 
             all_players = general_player_handler.get_online_players()
 
@@ -557,6 +560,7 @@ def main():
                 #networking.broadcast(set_tablist_header_footer, gamestate)s
 
             threading.Thread(target=updateTab).start()
+
 
     networking = Networking()
 

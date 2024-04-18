@@ -1,51 +1,85 @@
-# import time
-# start = time.time()
-# import random
-import threading
+import time
 
-# def generate_noise(width, height, seed):
-#     random.seed(seed)
-#     return [[random.random() for _ in range(width)] for _ in range(height)]
+def generate_spiral(size):
+    start = time.time()
 
-# # Usage
-# noise = generate_noise(1024, 1024, seed=12345)
-# print(noise[10][10])
-# print(time.time() - start)
+    x, y, dx, dy = 0, 0, 0, -1
 
-import threading
+    for _ in range((2*size+1)**2):
+        if x == y or (x < 0 and x == -y) or (x > 0 and x == 1-y):
+            dx, dy = -dy, dx
 
-a = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-while True:
-    print(a[0]) if a else None
-    a.pop(0) if a else None
+        print((x, y))
 
+        x, y = x + dx, y + dy
+    print(time.time() - start)
+
+locked = False
+
+while not locked:
+    locked = True
+    try:
+        print("Locked")
+    finally:
+        locked = False
+        break
 
 """
-            packet_queue = []
-
-            def handle_queue():
-                while packet_queue:
-                    clientbound.send_encrypted(packet_queue[0], gamestate, encryptor)
-
-            def handle_y(y_coord):
-                for y in range(height + 1 if height % 2 == 0 else height):
-                    start_time = time.time()
-                    packet_queue.append(ChunkDataUpdateLight(x_coord, y_coord, b'', b''))
-                    y_coord += 1
-
-            for x in range(width + 1 if width % 2 == 0 else width):
-                threading.Thread(target=handle_y, args=(y_coord)).start()
-                x_coord += 1
+            def send_chunks():
+                pr = cProfile.Profile()
+                pr.enable()
+    
+                width = 20
+                height = 20
+    
+                center = 0
+    
+                start = (width // 2, height // 2)
+    
+                x_coord = center - start[0]
                 y_coord = center - start[1]
+    
+                for x in range(width + 1 if width % 2 == 0 else width):
+                    for y in range(height + 1 if height % 2 == 0 else height):
+                        chunk_data_update_light = ChunkDataUpdateLight(x_coord, y_coord, b'', b'')
+                        clientbound.send_encrypted(chunk_data_update_light, gamestate, encryptor)
+                        print("Packet")
+                        y_coord += 1
+                    x_coord += 1
+                    y_coord = center - start[1]
+                print("Sent chunks")
+                pr.disable()
+                s = io.StringIO()
+                sortby = SortKey.TIME
+                ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+                ps.print_stats()
+                print(s.getvalue())
+    
+            threading.Thread(target=send_chunks).start() #This is so slow I have to thread it
 """
 
+
 """
-pr = cProfile.Profile()
-pr.enable()
-pr.disable()
-s = io.StringIO()
-sortby = SortKey.TIME
-ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-ps.print_stats()
-print(s.getvalue())
+            def send_chunks():
+                pr = cProfile.Profile()
+                pr.enable()
+                x, y, dx, dy = 0, 0, 0, -1
+
+                for _ in range((2*20+1)**2):
+                    if x == y or (x < 0 and x == -y) or (x > 0 and x == 1-y):
+                        dx, dy = -dy, dx
+
+                    chunk_data_update_light = ChunkDataUpdateLight(x, y, b'', b'')
+                    clientbound.send_encrypted(chunk_data_update_light, gamestate, encryptor)
+
+                    x, y = x + dx, y + dy
+                print("Sent chunks")
+                pr.disable()
+                s = io.StringIO()
+                sortby = SortKey.TIME
+                ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+                ps.print_stats()
+                print(s.getvalue())
+
+            threading.Thread(target=send_chunks).start() #This is so slow I have to thread it
 """

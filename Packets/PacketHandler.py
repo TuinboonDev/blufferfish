@@ -7,6 +7,7 @@ import sys
 
 Pack = Pack()
 
+locked = False
 
 class Clientbound:
     def __init__(self, socket: socket.socket):
@@ -35,13 +36,17 @@ class Clientbound:
             input = packet.get()[x]
             final_packet += method(input)
 
-
-
-
-        if encryptor is not None:
-            self.socket.send(encryptor.update(Pack.pack_varint(len(final_packet)) + final_packet))
-        else:
-            self.socket.send(Pack.pack_varint(len(final_packet)) + final_packet)
+        global locked
+        while not locked:
+            locked = True
+            try:
+                if encryptor is not None:
+                    self.socket.send(encryptor.update(Pack.pack_varint(len(final_packet)) + final_packet))
+                else:
+                    self.socket.send(Pack.pack_varint(len(final_packet)) + final_packet)
+            finally:
+                locked = False
+                break
 
         #if packet.__class__.__name__ == "ChunkDataUpdateLight":
 
