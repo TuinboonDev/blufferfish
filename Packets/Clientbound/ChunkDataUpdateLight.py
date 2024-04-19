@@ -1,6 +1,6 @@
 from Packets.PacketUtil import Pack
 from Util import enforce_annotations
-from Handlers.GeneralChunkHandler import realchunk
+from Handlers.GeneralChunkHandler import generate_chunk, generate_noise
 
 import struct
 
@@ -17,14 +17,12 @@ def write_single_valued_paletted_container(entry: int):
 
     return data
 
-
-def write_data_ig(chunk_x, chunk_z):
-    return realchunk(chunk_x, chunk_z)
+noise = generate_noise(1024, 1024, seed=12345)
 
 class ChunkDataUpdateLight(Packet):
     @enforce_annotations
     def __init__(self, chunk_x: int, chunk_z: int, data: bytes, block_entities: bytes):
-        data = Pack.pack_data(write_data_ig(chunk_x, chunk_z))
+        data = Pack.pack_data(generate_chunk(noise, chunk_x, chunk_z).serialize())
 
         chunk_x = chunk_x.to_bytes(4, byteorder='big', signed=True)
         chunk_z = chunk_z.to_bytes(4, byteorder='big', signed=True)

@@ -40,26 +40,22 @@ from Packets.Clientbound.EntityAnimation import EntityAnimation
 from Packets.Clientbound.AcknowledgeBlockChange import AcknowledgeBlockChange
 from Packets.Clientbound.BlockUpdate import BlockUpdate
 from Packets.Clientbound.WorldEvent import WorldEvent
+from Packets.Clientbound.RawChunkDataUpdateLight import RawChunkDataUpdateLight
 
 from Packets.PacketHandler import Clientbound, Serverbound
 from Packets.ServerData import ServerData
 from Packets.PacketMap import GameState
-from Packets.PacketUtil import ByteBuffer, Unpack
+from Packets.PacketUtil import ByteBuffer, Unpack, Pack
 
+from Handlers.GeneralChunkHandler import generate_noise
 from Encryption import Encryption
 from Networking import Networking
 from Handlers.GeneralPlayerHandler import GeneralPlayerHandler
 from Exceptions import ClientError
 from Util import enforce_annotations
 
-print("""
-\u001b[36m ____  __    __  __  ____  ____  ____  ____    \u001b[33;1m____  ____  ___  _   _ 
-\u001b[36m(  _ \(  )  (  )(  )( ___)( ___)( ___)(  _ \  \u001b[33;1m( ___)(_  _)/ __)( )_( )
-\u001b[36m ) _ < )(__  )(__)(  )__)  )__)  )__)  )   /   \u001b[33;1m)__)  _)(_ \__ \ ) _ ( 
-\u001b[36m(____/(____)(______)(__)  (__)  (____)(_)\_)  \u001b[33;1m(__)  (____)(___/(_) (_)
-                                                                                            \033[0m""")
-
 Unpack = Unpack()
+Pack = Pack()
 
 def main():
     # Define the port to listen on
@@ -74,6 +70,13 @@ def main():
 
     # Listen for incoming connections
     server_socket.listen(5)
+
+    print("""
+\u001b[36m ____  __    __  __  ____  ____  ____  ____    \u001b[33;1m____  ____  ___  _   _ 
+\u001b[36m(  _ \(  )  (  )(  )( ___)( ___)( ___)(  _ \  \u001b[33;1m( ___)(_  _)/ __)( )_( )
+\u001b[36m ) _ < )(__  )(__)(  )__)  )__)  )__)  )   /   \u001b[33;1m)__)  _)(_ \__ \ ) _ ( 
+\u001b[36m(____/(____)(______)(__)  (__)  (____)(_)\_)  \u001b[33;1m(__)  (____)(___/(_) (_)
+                                                                                            \033[0m""")
 
     print("Listening on port", PORT)
 
@@ -347,32 +350,31 @@ def main():
             threading.Thread(target=keepAlive).start()
 
             def send_chunks():
-                pr = cProfile.Profile()
-                pr.enable()
+                try:
+                    with open("world.dat", "r") as f:
+                        for line in f:
+                            packet = bytes.fromhex(line.strip())
+                            clientbound.send_raw_encrypted(packet, encryptor)
+                except FileNotFoundError:
+                    width = 20
+                    height = 20
 
-                width = 20
-                height = 20
+                    center = 0
 
-                center = 0
+                    start = (width // 2, height // 2)
 
-                start = (width // 2, height // 2)
-
-                x_coord = center - start[0]
-                y_coord = center - start[1]
-
-                for x in range(width + 1 if width % 2 == 0 else width):
-                    for y in range(height + 1 if height % 2 == 0 else height):
-                        chunk_data_update_light = ChunkDataUpdateLight(x_coord, y_coord, b'', b'')
-                        clientbound.send_encrypted(chunk_data_update_light, gamestate, encryptor)
-                        y_coord += 1
-                    x_coord += 1
+                    x_coord = center - start[0]
                     y_coord = center - start[1]
-                pr.disable()
-                s = io.StringIO()
-                sortby = SortKey.TIME
-                ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-                ps.print_stats()
-                print(s.getvalue())
+
+                    with open("world.dat", "x") as f:
+                        for x in range(width + 1 if width % 2 == 0 else width):
+                            for y in range(height + 1 if height % 2 == 0 else height):
+                                packet = b'\x25' + RawChunkDataUpdateLight(x_coord, y_coord)
+                                f.write((Pack.pack_varint(len(packet)) + packet).hex())
+                                f.write("\n")
+                                y_coord += 1
+                            x_coord += 1
+                            y_coord = center - start[1]
 
             threading.Thread(target=send_chunks).start() #This is so slow I have to thread it
 

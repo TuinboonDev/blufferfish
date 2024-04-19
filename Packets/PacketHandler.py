@@ -49,6 +49,12 @@ class Clientbound:
 
         #if packet.__class__.__name__ == "ChunkDataUpdateLight":
 
+    def send_raw_encrypted(self, packet, encryptor):
+        lock.acquire()
+        try:
+            self.socket.send(encryptor.update(packet))
+        finally:
+            lock.release()
 
     def send(self, packet, gamestate):
         self.__send(packet, gamestate, None)

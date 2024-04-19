@@ -1,49 +1,11 @@
-import time
-import cProfile
-import io
-from pstats import SortKey
-import pstats
+from Handlers.GeneralChunkHandler import generate_chunk, generate_noise
+from Packets.Clientbound.RawChunkDataUpdateLight import RawChunkDataUpdateLight
+from Packets.PacketUtil import Pack
+from Packets.PacketHandler import Clientbound
 
-def generate_spiral(size):
-    start = time.time()
 
-    x, y, dx, dy = 0, 0, 0, -1
 
-    for _ in range((2*size+1)**2):
-        if x == y or (x < 0 and x == -y) or (x > 0 and x == 1-y):
-            dx, dy = -dy, dx
-
-        print((x, y))
-
-        x, y = x + dx, y + dy
-    print(time.time() - start)
-
-locked = False
-
-while not locked:
-    locked = True
-    try:
-        print("Locked")
-    finally:
-        locked = False
-        break
-
-pr = cProfile.Profile()
-pr.enable()
-x, y, dx, dy = 0, 0, 0, -1
-
-spiral = [(x, y) for _ in range((2*20+1)**2) if not (x != y and (x >= 0 or x != -y) and (x <= 0 or x != 1-y))]
-
-for coord in spiral:
-    dx, dy = -dy, dx
-    x, y = x + dx, y + dy
-
-pr.disable()
-s = io.StringIO()
-sortby = SortKey.TIME
-ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-ps.print_stats()
-print(s.getvalue())
+print(b'\x25')
 
 """
             def send_chunks():

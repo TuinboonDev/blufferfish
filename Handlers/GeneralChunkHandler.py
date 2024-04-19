@@ -88,20 +88,11 @@ class Chunk:
         return self.chunk_sections
 
 def generate_chunk(noise: list, chunk_x: int, chunk_z: int) -> Chunk:
-    """pr = cProfile.Profile()
-    pr.enable()"""
     chunk_sections = []
     noise_values = [[get_noise(noise, chunk_x * 16 + x, chunk_z * 16 + z) for z in range(16)] for x in range(16)] #Helps with speed
     for chunk_section in range(24):
         blocks = [1 if -64 + (chunk_section * 16) + y < 96 + noise_values[x][z] * 128 else 0 for y, z, x in itertools.product(range(16), repeat=3)]
         chunk_sections.append(ChunkSection(blocks))
-
-    """pr.disable()
-    s = io.StringIO()
-    sortby = SortKey.TIME
-    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    ps.print_stats()
-    print(s.getvalue())"""
 
     return Chunk(chunk_sections)
 
@@ -117,11 +108,6 @@ def generate_noise(width: int, height: int, seed: int) -> list[list[float]]:
         l1.append(l2)
 
     return l1
-
-noise = generate_noise(1024, 1024, seed=12345)
-
-def realchunk(chunk_x: int, chunk_z: int):
-    return generate_chunk(noise, chunk_x, chunk_z).serialize()
 
 
 """@enforce_annotations
