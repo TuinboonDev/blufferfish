@@ -1,4 +1,8 @@
 import time
+import cProfile
+import io
+from pstats import SortKey
+import pstats
 
 def generate_spiral(size):
     start = time.time()
@@ -23,6 +27,23 @@ while not locked:
     finally:
         locked = False
         break
+
+pr = cProfile.Profile()
+pr.enable()
+x, y, dx, dy = 0, 0, 0, -1
+
+spiral = [(x, y) for _ in range((2*20+1)**2) if not (x != y and (x >= 0 or x != -y) and (x <= 0 or x != 1-y))]
+
+for coord in spiral:
+    dx, dy = -dy, dx
+    x, y = x + dx, y + dy
+
+pr.disable()
+s = io.StringIO()
+sortby = SortKey.TIME
+ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+ps.print_stats()
+print(s.getvalue())
 
 """
             def send_chunks():

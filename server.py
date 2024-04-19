@@ -364,11 +364,9 @@ def main():
                     for y in range(height + 1 if height % 2 == 0 else height):
                         chunk_data_update_light = ChunkDataUpdateLight(x_coord, y_coord, b'', b'')
                         clientbound.send_encrypted(chunk_data_update_light, gamestate, encryptor)
-                        print("Packet")
                         y_coord += 1
                     x_coord += 1
                     y_coord = center - start[1]
-                print("Sent chunks")
                 pr.disable()
                 s = io.StringIO()
                 sortby = SortKey.TIME

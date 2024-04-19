@@ -1,13 +1,14 @@
 from Packets.PacketUtil import Pack
 from Packets.PacketMap import GameStates
-from Encryption import Encryption
+import threading
 
 import socket
 import sys
 
 Pack = Pack()
 
-locked = False
+lock = threading.Lock()
+
 
 class Clientbound:
     def __init__(self, socket: socket.socket):
@@ -36,17 +37,15 @@ class Clientbound:
             input = packet.get()[x]
             final_packet += method(input)
 
-        global locked
-        while not locked:
-            locked = True
-            try:
-                if encryptor is not None:
-                    self.socket.send(encryptor.update(Pack.pack_varint(len(final_packet)) + final_packet))
-                else:
-                    self.socket.send(Pack.pack_varint(len(final_packet)) + final_packet)
-            finally:
-                locked = False
-                break
+
+        lock.acquire()
+        try:
+             if encryptor is not None:
+                self.socket.send(encryptor.update(Pack.pack_varint(len(final_packet)) + final_packet))
+             else:
+                self.socket.send(Pack.pack_varint(len(final_packet)) + final_packet)
+        finally:
+            lock.release()
 
         #if packet.__class__.__name__ == "ChunkDataUpdateLight":
 
