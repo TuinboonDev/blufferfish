@@ -91,9 +91,8 @@ def generate_chunk(noise: list, chunk_x: int, chunk_z: int) -> Chunk:
     chunk_sections = []
     noise_values = [[get_noise(noise, chunk_x * 16 + x, chunk_z * 16 + z) for z in range(16)] for x in range(16)] #Helps with speed
     for chunk_section in range(24):
-        blocks = [1 if -64 + (chunk_section * 16) + y < chunk_x * 16 + x + chunk_z * 16 + z else 0 for y, z, x in itertools.product(range(16), repeat=3)]
+        blocks = [1 if -64 + (chunk_section * 16) + y < 96 + noise_values[x][z] * 128 else 0 for y, z, x in itertools.product(range(16), repeat=3)]
         chunk_sections.append(ChunkSection(blocks))
-
     return Chunk(chunk_sections)
 
 def get_noise(noise: list[list[float]], x: int, z: int) -> float:

@@ -37,7 +37,6 @@ class Clientbound:
             input = packet.get()[x]
             final_packet += method(input)
 
-
         lock.acquire()
         try:
              if encryptor is not None:

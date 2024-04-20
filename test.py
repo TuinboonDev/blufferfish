@@ -1,11 +1,20 @@
-from Handlers.GeneralChunkHandler import generate_chunk, generate_noise
-from Packets.Clientbound.RawChunkDataUpdateLight import RawChunkDataUpdateLight
-from Packets.PacketUtil import Pack
-from Packets.PacketHandler import Clientbound
+import random
+import time
 
+def check(sequence):
+    num = 1
+    for i in sequence:
+        if i == num:
+            num += 1
+        else:
+            return False
+    return True
 
-
-print(b'\x25')
+start = time.time()
+a = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+while not check(a):
+    random.shuffle(a)
+print(time.time() - start)
 
 """
             def send_chunks():

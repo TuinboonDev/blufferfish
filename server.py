@@ -47,7 +47,6 @@ from Packets.ServerData import ServerData
 from Packets.PacketMap import GameState
 from Packets.PacketUtil import ByteBuffer, Unpack, Pack
 
-from Handlers.GeneralChunkHandler import generate_noise
 from Encryption import Encryption
 from Networking import Networking
 from Handlers.GeneralPlayerHandler import GeneralPlayerHandler
@@ -58,17 +57,53 @@ Unpack = Unpack()
 Pack = Pack()
 
 def main():
-    # Define the port to listen on
     PORT = 25565
     HOST = 'localhost'
 
-    # Create a socket object
+    generating = False
+
+    def loading_text(text):
+        i = 0
+        while generating:
+            sys.stdout.write(f'\r{text}' + '.' * i)
+            i += 1 if i < 3 else -3
+            sys.stdout.flush()
+            time.sleep(0.5)
+        sys.stdout.write('\r                 ')
+        sys.stdout.flush()
+
+    try:
+        open("world.dat", "r").close()
+    except FileNotFoundError:
+        generating = True
+        text_thread = threading.Thread(target=loading_text, args=("Generating world",))
+        text_thread.start()
+        width = 20
+        height = 20
+
+        center = 0
+
+        start = (width // 2, height // 2)
+
+        x_coord = center - start[0]
+        y_coord = center - start[1]
+
+        with open("world.dat", "x") as f:
+            for x in range(width + 1 if width % 2 == 0 else width):
+                for y in range(height + 1 if height % 2 == 0 else height):
+                    packet = b'\x25' + RawChunkDataUpdateLight(x_coord, y_coord)
+                    f.write((Pack.pack_varint(len(packet)) + packet).hex())
+                    f.write("\n")
+                    y_coord += 1
+                x_coord += 1
+                y_coord = center - start[1]
+        generating = False
+        text_thread.join()
+
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    # Bind the socket to the port
     server_socket.bind((HOST, PORT))
 
-    # Listen for incoming connections
     server_socket.listen(5)
 
     print("""
@@ -87,8 +122,8 @@ def main():
         except TypeError as e:
             raise e
             ClientError("Client disconnected")
-            #networking.remove_client(socket)
-            #general_player_handler.remove_player(socket)
+            networking.remove_client(socket)
+            general_player_handler.remove_player(socket)
             sys.exit()
 
         buf = ByteBuffer(socket.recv(packet_length))
@@ -145,7 +180,7 @@ def main():
                     5,
                     -5,
                     sample,
-                    "BlufferFish",#\u00A73Bluffer\u00A7eFish
+                    "\u00A73Bluffer\u00A7eFish",
                     "icon.png",
                     False,
                     True
@@ -350,31 +385,10 @@ def main():
             threading.Thread(target=keepAlive).start()
 
             def send_chunks():
-                try:
-                    with open("world.dat", "r") as f:
-                        for line in f:
-                            packet = bytes.fromhex(line.strip())
-                            clientbound.send_raw_encrypted(packet, encryptor)
-                except FileNotFoundError:
-                    width = 20
-                    height = 20
-
-                    center = 0
-
-                    start = (width // 2, height // 2)
-
-                    x_coord = center - start[0]
-                    y_coord = center - start[1]
-
-                    with open("world.dat", "x") as f:
-                        for x in range(width + 1 if width % 2 == 0 else width):
-                            for y in range(height + 1 if height % 2 == 0 else height):
-                                packet = b'\x25' + RawChunkDataUpdateLight(x_coord, y_coord)
-                                f.write((Pack.pack_varint(len(packet)) + packet).hex())
-                                f.write("\n")
-                                y_coord += 1
-                            x_coord += 1
-                            y_coord = center - start[1]
+                with open("world.dat", "r") as f:
+                    for line in f:
+                        packet = bytes.fromhex(line.strip())
+                        clientbound.send_raw_encrypted(packet, encryptor)
 
             threading.Thread(target=send_chunks).start() #This is so slow I have to thread it
 
@@ -457,7 +471,6 @@ def main():
                         update_entity_position = UpdateEntityPosition(entity_id, delta_x, delta_y, delta_z, on_ground)
 
                         networking.send_to_others(update_entity_position, client_socket, gamestate)
-
                     elif packet.get("packet_name") == "SetPlayerPositionRotation":
                         on_ground = packet.get("on_ground")
                         currentX = packet.get("x")
@@ -482,7 +495,6 @@ def main():
                         set_head_rotation = SetHeadRotation(entity_id, yaw)
 
                         networking.send_to_others(set_head_rotation, client_socket, gamestate)
-
                     elif packet.get("packet_name") == "SetPlayerRotation":
                         on_ground = packet.get("on_ground")
                         yaw = packet.get("yaw")
